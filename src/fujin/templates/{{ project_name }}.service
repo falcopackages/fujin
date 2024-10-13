@@ -1,0 +1,24 @@
+# TODO: add tons of comments in this file
+[Unit]
+Description={{ project_name }} daemon
+Requires={{ project_name }}.socket
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User={{ username }}
+Group=www-data
+RuntimeDirectory={{ project_name }}
+WorkingDirectory=/home/{{ username }}/djangoprojects/{{ project_name }}
+ExecStart=/home/{{ username }}/djangoprojects/{{ project_name }}/{{ project_name }} --bind unix:/run/{{ project_name }}.sock
+EnvironmentFile=/home/{{ username }}/djangoprojects/{{ project_name }}/.env
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+# if your app does not need administrative capabilities, let systemd know
+# ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

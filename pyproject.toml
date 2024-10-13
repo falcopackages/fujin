@@ -7,7 +7,7 @@ authors = [
     { name = "Tobi DEGNON", email = "tobidegnon@proton.me" } 
 ]
 requires-python = ">=3.10"
-dependencies = ["fabric", "rich", "tomlkit"]
+dependencies = ["fabric", "rich", "tomlkit", "jinja2"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",

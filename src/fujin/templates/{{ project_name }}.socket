@@ -1,0 +1,11 @@
+[Unit]
+Description={{ cookiecutter.project_name }} socket
+
+[Socket]
+ListenStream=/run/{{ cookiecutter.project_name }}.sock
+SocketUser=www-data
+SocketGroup=www-data
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target
