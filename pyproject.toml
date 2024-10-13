@@ -8,6 +8,18 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = ["fabric", "rich", "tomlkit"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
 
 urls.Documentation = "https://github.com/falcopackages/fujin#readme"
 urls.Issues = "https://github.com/falcopackages/fujin/issues"
