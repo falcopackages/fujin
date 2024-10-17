@@ -1,0 +1,36 @@
+name: Publish package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    name: Publish to pypi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Build Wheel
+        run: uv build
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    name: Create a GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Generate Changelog
+        run: |
+          awk '/^## /{if (p) exit; p=1; next} p' ${{ github.workspace }}/CHANGELOG.md | tee ${{ github.workspace }}-CHANGELOG.txt
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          files: dist/*
+          fail_on_unmatched_files: true
