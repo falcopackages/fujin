@@ -8,6 +8,16 @@ _default:
 run *ARGS:
     uv run {{ ARGS }}
 
+# Run ssh server container
+sshserver:
+    docker stop sshserver && docker rm sshserver > /dev/null 2>&1 || true
+    docker build -t sshserver .
+    docker run -d -p 2222:22 --name sshserver sshserver 
+
+# SSH into sshserver
+ssh:
+    ssh -i id_rsa test@localhost -p 2222
+
 # Generate changelog, useful to update the unreleased section
 logchange:
     just run git-cliff --output CHANGELOG.md

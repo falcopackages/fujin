@@ -1,0 +1,17 @@
+services:
+    ssh:
+        image: "linuxserver/openssh-server"
+        container_name: sshserver
+        ports:
+            - "2222:2222"
+        volumes:
+            - "./id_rsa.pub:/pubkey:ro"
+        environment:
+            PUID: 1000
+            PGID: 1000
+            TZ: UTC
+            PUBLIC_KEY_FILE: "/pubkey"
+            SUDO_ACCESS: "false"
+            PASSWORD_ACCESS: "false"
+            USER_NAME: tobi
+        restart: "unless-stopped"
