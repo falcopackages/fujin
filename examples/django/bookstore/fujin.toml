@@ -1,0 +1,28 @@
+app = "bookstore"
+version = "echo '0.1.0'"
+build_command = "uv build"
+release_command = "!bookstore migrate"
+requirements = "requirements.txt"
+distfile = "dist/bookstore-{version}-py3-none-any.whl"
+envfile = ".env.prod"
+
+[aliases]
+console = "!bookstore shell_plus"
+migrate = "!bookstore migrate"
+shell_plus = "!bookstore shell_plus"
+
+[processes.web]
+port = 8000
+# bind = "unix:/run/bookstore.sock" # bind and port are mutually exclusive
+command = "!bookstore prodserver"
+
+[processes.worker]
+command = "!bookstore qcluster"
+
+[hosts.main]
+ip = "127.0.0.1"
+domain_name = "mybookstore.com"
+user = "test"
+key_filename = "./../../../id_rsa"
+ssh_port = 2222
+project_dir = ".local/share/fujin/bookstore" # relative to user home

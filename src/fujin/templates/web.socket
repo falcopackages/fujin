@@ -1,8 +1,8 @@
 [Unit]
-Description={{ cookiecutter.project_name }} socket
+Description={{ app }} socket
 
 [Socket]
-ListenStream=/run/{{ cookiecutter.project_name }}.sock
+ListenStream=/run/{{ app }}.sock
 SocketUser=www-data
 SocketGroup=www-data
 SocketMode=0660

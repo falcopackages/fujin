@@ -1,0 +1,24 @@
+# TODO: add tons of comments in this file
+[Unit]
+Description={{ app }} daemon
+Requires={{ app }}.socket
+After=network.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User={{ user }}
+Group=www-data
+RuntimeDirectory={{ app }}
+WorkingDirectory={{ host.project_dir }}
+ExecStart={{ host.project_dir }}/{{ command }}
+EnvironmentFile={{ host.project_dir }}/.env
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+# if your app does not need administrative capabilities, let systemd know
+# ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

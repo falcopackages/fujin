@@ -114,7 +114,7 @@ celerybeat.pid
 
 # Environments
 .env
-.env.prod
+examples/django/bookstore/.env.prod
 .venv
 env/
 venv/
@@ -145,3 +145,6 @@ dmypy.json
 
 # MacOs
 .DS_Store
+
+id_rsa
+id_rsa.pub

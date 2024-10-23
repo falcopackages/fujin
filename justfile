@@ -8,15 +8,37 @@ _default:
 run *ARGS:
     uv run {{ ARGS }}
 
-# Run ssh server container
-sshserver:
+# Create test ubuntu container
+create-test-container:
+    rm id_rsa && rm id_rsa.pub > /dev/null 2>&1 || true
+    ssh-keygen -t rsa -N "" -f id_rsa
     docker stop sshserver && docker rm sshserver > /dev/null 2>&1 || true
     docker build -t sshserver .
-    docker run -d -p 2222:22 --name sshserver sshserver 
+    docker run -d -p 2222:22 -p 8000:80 --name sshserver sshserver
 
-# SSH into sshserver
+# SSH into test container
 ssh:
     ssh -i id_rsa test@localhost -p 2222
+
+# Run uv command in the django example project
+djuv *ARGS:
+    #!/usr/bin/env bash
+    cd examples/django/bookstore
+    uv --project bookstore {{ ARGS }}
+
+# Generate django project requirements:
+dj-requirements:
+    just djuv pip compile pyproject.toml -o requirements.txt
+
+# Run fujin command in the django example project
+fujin *ARGS:
+    #!/usr/bin/env bash
+    cd examples/django/bookstore
+    ../../../.venv/bin/python -m fujin
+
+# -------------------------------------------------------------------------
+# RELEASE UTILITIES
+#---------------------------------------------------------------------------
 
 # Generate changelog, useful to update the unreleased section
 logchange:

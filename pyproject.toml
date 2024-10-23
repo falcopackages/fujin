@@ -7,7 +7,13 @@ authors = [
     { name = "Tobi DEGNON", email = "tobidegnon@proton.me" } 
 ]
 requires-python = ">=3.10"
-dependencies = ["fabric", "rich", "tomlkit", "jinja2"]
+dependencies = [
+    "cappa>=0.23.0",
+    "fabric>=3.2.2",
+    "jinja2>=3.1.4",
+    "rich>=13.9.2",
+    "tomlkit>=0.13.2",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -26,7 +32,7 @@ urls.Issues = "https://github.com/falcopackages/fujin/issues"
 urls.Source = "https://github.com/falcopackages/fujin"
 
 [project.scripts]
-fujin = "fujin:main"
+fujin = "fujin.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -40,8 +46,14 @@ packages = [
 [tool.uv]
 dev-dependencies = [
     "bump-my-version>=0.27.0",
+    "django>=5.1.2",
+    "fastapi>=0.115.3",
     "git-cliff>=2.6.1",
+    "litestar>=2.12.1",
 ]
+
+[tool.uv.workspace]
+members = ["examples/django/bookstore"]
 
 [tool.bumpversion]
 current_version = "0.0.1"
