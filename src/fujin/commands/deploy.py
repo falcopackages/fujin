@@ -5,45 +5,25 @@ import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
 
 import cappa
 
-from fujin.config import ConfigDep, ImproperlyConfiguredError, Config, Host
+from fujin.commands.base import BaseCommand
+from fujin.config import ConfigDep, ImproperlyConfiguredError, Config, Host, Process
 
 
 @cappa.command(help="Deploy project")
-class Deploy:
-    host: Annotated[str | None, cappa.Arg(long="--host")]
+class Deploy(BaseCommand):
 
     def __call__(self, config: ConfigDep, output: cappa.Output):
-        host = config.hosts.get(self.host) or config.primary_host
+        host = self.host(config)
         try:
             subprocess.run(config.release_command.split(), check=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
 
-        envfile = host.envfile or config.envfile
-        if not envfile:
-            raise ImproperlyConfiguredError(
-                f"Missing envfile in both top config and {host.name} configuration"
-            )
-        if not envfile.exists():
-            raise cappa.Exit(f"{envfile} not found", code=1)
-
-        if not config.requirements.exists():
-            raise cappa.Exit(f"{config.requirements} not found", code=1)
-
         host.connection.run(f"mkdir -p {host.project_dir}")
-        host.connection.put(
-            str(config.requirements), f"{host.project_dir}/requirements.txt"
-        )
-        host.connection.put(str(envfile), f"{host.project_dir}/.env")
-        host.connection.put(
-            str(config.distfile), f"{host.project_dir}/{config.distfile.name}"
-        )
-        host.connection.run(f"echo {config.python_version} > .python-version")
-
+        self.transfer_files(host, config)
         self.install_project(host, config)
 
         systemd_files = self.get_systemd_files(host=host, config=config)
@@ -67,10 +47,33 @@ class Deploy:
             )
 
     @classmethod
+    def transfer_files(cls, host: Host, config: Config):
+        envfile = host.envfile or config.envfile
+        if not envfile:
+            raise ImproperlyConfiguredError(
+                f"Missing envfile in both top config and {host.name} configuration"
+            )
+        if not envfile.exists():
+            raise cappa.Exit(f"{envfile} not found", code=1)
+
+        if not config.requirements.exists():
+            raise cappa.Exit(f"{config.requirements} not found", code=1)
+        host.connection.put(
+            str(config.requirements), f"{host.project_dir}/requirements.txt"
+        )
+        host.connection.put(str(envfile), f"{host.project_dir}/.env")
+        host.connection.put(
+            str(config.distfile), f"{host.project_dir}/{config.distfile.name}"
+        )
+        host.connection.run(f"echo {config.python_version} > .python-version")
+
+    @classmethod
     def install_project(cls, host: Host, config: Config):
         with host.connection.cd(host.project_dir):
             host.run_uv("sync")
             host.run_uv(f"pip install {config.distfile.name}")
+            if config.release_command:
+                host.run(config.release_command)
 
     @classmethod
     def get_caddy_config(cls, host: Host, config: Config) -> dict:
@@ -120,7 +123,7 @@ class Deploy:
         }
         files = [
             SystemdFile(
-                name=f"{config.app}.service",
+                name=f"{Process.service_name(app=config.app, name='web')}.service",
                 content=web_service_content.format(
                     **context, command=config.web_process.command
                 ),
@@ -134,7 +137,7 @@ class Deploy:
             if name != "web":
                 files.append(
                     SystemdFile(
-                        name=f"{config.app}-{name}.service",
+                        name=f"{Process.service_name(app=config.app, name='web')}.service",
                         content=other_service_content.format(
                             **context, command=process.command
                         ),

@@ -31,7 +31,7 @@ class Config:
     tasks: dict[str, str] = field(default_factory=dict)
     release_command: str | None = None
     envfile: Path | None = None
-    requirements: Path = Path("requirements.txt")
+    requirements: Path = field(default=lambda: Path("requirements.txt"))
 
     @cached_property
     def primary_host(self) -> Host:
@@ -184,6 +184,12 @@ class Process:
     command: str
     port: int | None = None
     bind: str | None = None
+
+    @classmethod
+    def service_name(cls, app: str, name: str):
+        if name == "web":
+            return app
+        return f"{app}-{name}"
 
     @classmethod
     def parse(cls, processes: dict) -> [str, Process]:
