@@ -1,8 +1,8 @@
 [Unit]
-Description={{ app }} socket
+Description={ app } socket
 
 [Socket]
-ListenStream=/run/{{ app }}.sock
+ListenStream=/run/{ app }.sock
 SocketUser=www-data
 SocketGroup=www-data
 SocketMode=0660

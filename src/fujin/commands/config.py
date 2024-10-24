@@ -27,6 +27,7 @@ class Show:
         general_config = {
             "app": config.app,
             "version": config.version,
+            "python_version": config.python_version,
             "build_command": config.build_command,
             "distfile": config.distfile,
             "envfile": config.envfile,

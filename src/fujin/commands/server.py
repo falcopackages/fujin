@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
 from cappa.output import Output
 
+from fujin.commands.base import BaseCommand
 from fujin.config import ConfigDep
 
 
@@ -14,29 +16,33 @@ class Server:
 
 
 @cappa.command(help="Setup uv, caddy and install some dependencies")
-class Bootstrap:
-    host: Annotated[str | None, cappa.Arg(long="--host")]
+class Bootstrap(BaseCommand):
+    _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
 
     def __call__(self, config: ConfigDep, output: Output):
-        host = config.hosts.get(self.host) or config.primary_host
+        host = self.host(config)
         host.connection.sudo("apt update", watchers=host.watchers)
         host.connection.sudo("apt upgrade -y", watchers=host.watchers)
         host.connection.sudo("apt install -y sqlite3 curl", watchers=host.watchers)
-        host.connection.run("curl -LsSf https://astral.sh/uv/install.sh | sh") # only run if uv is not already installed
-        host.run_uv("tool update-shell") # only run if uv is not already installed
+        r = host.connection.run("whereis uv").stdout.strip()[2:]
+        print(r)
+        uv_is_installed = r != ""
+        if not uv_is_installed:
+            host.connection.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
+            host.run_uv("tool update-shell")
         host.run_uv("tool install caddy-bin")
         host.run_caddy("start", pty=True)
         output.output("[green]Server bootstrap Done![/green]")
 
 
 @cappa.command(help="Run arbitrary command on the server")
-class Exec:
+@dataclass(frozen=True)
+class Exec(BaseCommand):
     command: str
-    host: Annotated[str | None, cappa.Arg(long="--host")]
     interactive: bool = False
 
     def __call__(self, config: ConfigDep, output: Output):
-        host = config.hosts.get(self.host) or config.primary_host
+        host = self.host(config)
         if self.interactive:
             host.connection.run(self.command, pty=self.interactive)
         else:
@@ -45,13 +51,13 @@ class Exec:
 
 
 @cappa.command(help="Create a new user with sudo and ssh access")
-class CreateUser:
+@dataclass(frozen=True)
+class CreateUser(BaseCommand):
     name: str
-    host: Annotated[str | None, cappa.Arg(long="--host")]
 
     def __call__(self, config: ConfigDep, output: Output):
         # TODO not working right now, ssh key not working
-        host = config.hosts.get(self.host) or config.primary_host
+        host = self.host(config)
         host.connection.sudo(f"adduser --disabled-password --gecos '' {self.name}")
         host.connection.sudo(f"mkdir -p /home/{self.name}/.ssh")
         host.connection.sudo(f"cp ~/.ssh/authorized_keys /home/{self.name}/.ssh/")

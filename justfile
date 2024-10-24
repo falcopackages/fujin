@@ -14,7 +14,16 @@ create-test-container:
     ssh-keygen -t rsa -N "" -f id_rsa
     docker stop sshserver && docker rm sshserver > /dev/null 2>&1 || true
     docker build -t sshserver .
-    docker run -d -p 2222:22 -p 8000:80 --name sshserver sshserver
+    docker run --privileged \
+    -v /run/systemd/system:/run/systemd/system \
+    -v /lib/systemd:/lib/systemd \
+    -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket \
+    -p 2222:22 \
+    -p 8000:80 \
+    --name sshserver \
+    -it sshserver \
+    bash -c "ln -s /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5 && bash"
+    # docker run --privileged -it --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock  -p 2222:22 -p 8000:80 --name sshserver sshserver /bin/bash
 
 # SSH into test container
 ssh:

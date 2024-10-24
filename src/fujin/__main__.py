@@ -11,7 +11,7 @@ class Fujin:
 
 
 def main():
-    install(show_locals=True)
+    # install(show_locals=True)
     cappa.invoke(Fujin)
 
 

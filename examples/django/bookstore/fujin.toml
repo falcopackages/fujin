@@ -1,5 +1,5 @@
-app = "bookstore"
-version = "0.1.0"
+#app = "bookstore"
+#version = "0.1.0"
 requirements = "requirements.txt"
 build_command = "uv build"
 release_command = "!bookstore migrate"
