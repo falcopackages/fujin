@@ -22,11 +22,10 @@ class Bootstrap:
         host.connection.sudo("apt update", watchers=host.watchers)
         host.connection.sudo("apt upgrade -y", watchers=host.watchers)
         host.connection.sudo("apt install -y sqlite3 curl", watchers=host.watchers)
-        host.connection.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
+        host.connection.run("curl -LsSf https://astral.sh/uv/install.sh | sh") # only run if uv is not already installed
+        host.run_uv("tool update-shell") # only run if uv is not already installed
         host.run_uv("tool install caddy-bin")
-        host.run_uv("tool update-shell")
         host.run_caddy("start", pty=True)
-        host.connection.run(f"mkdir -p {host.project_dir}")
         output.output("[green]Server bootstrap Done![/green]")
 
 

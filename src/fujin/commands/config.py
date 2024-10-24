@@ -1,16 +1,26 @@
+from __future__ import annotations
+
 from dataclasses import asdict
 
 import cappa
+from cappa import Output
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
 from fujin.config import ConfigDep
 
 
-@cappa.command(help="Show parsed configuration")
-class ShowConfig:
+# TODO show config docs
 
+@cappa.command(name="config", help="Config management")
+class ConfigCMD:
+    subcommands: cappa.Subcommands[Init | Show | Docs]
+
+
+@cappa.command(help="Show parsed configuration")
+class Show:
     def __call__(self, config: ConfigDep):
         console = Console()
 
@@ -82,3 +92,55 @@ class ShowConfig:
             aliases_table.add_row(alias, command)
 
         console.print(aliases_table)
+
+
+@cappa.command(help="Generate a sample configuration file")
+class Init:
+    pass
+
+
+@cappa.command(help="Config documentation")
+class Docs:
+
+    def __call__(self, output: Output):
+        output.output(Markdown(docs))
+
+
+docs = """
+# Fujin Configuration - Quick Reference
+
+## Global Options
+
+- `app` - Name of the project (e.g., "bookstore").
+- `version` - Project version (e.g., "0.1.0").
+- `requirements` - Path to the requirements file (e.g., "requirements.txt").
+- `build_command` - Command to build the project (e.g., "uv build").
+- `release_command` - Post-deployment command (e.g., migrations).
+- `distfile` - Path to the distribution file (e.g., "dist/bookstore-{version}.whl").
+- `envfile` - Path to the environment file (e.g., ".env.prod").
+
+## Aliases
+
+- Define shortcuts for commands:
+  - `console` = `!bookstore shell_plus`
+  - `migrate` = `!bookstore migrate`
+  - `shell_plus` = `!bookstore shell_plus`
+
+## Processes
+
+- Web process example:
+  - `port = 8000`
+  - `command = !bookstore prodserver`
+- Worker process example:
+  - `command = !bookstore qcluster`
+
+## Hosts
+
+- Host configuration example:
+  - `ip = "127.0.0.1"`
+  - `domain_name = "mybookstore.com"`
+  - `user = "test"`
+  - `password_env` (Optional) = `"TEST_PASSWORD"`
+  - `key_filename` (Optional) = `"./id_rsa"`
+  - `ssh_port` (Optional) = `2222`
+"""
