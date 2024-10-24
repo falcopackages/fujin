@@ -29,14 +29,15 @@ class ShowConfig:
         # Hosts Table with headers and each dictionary on its own line
         hosts_table = Table(title="Hosts", header_style="bold cyan")
         hosts_table.add_column("Host", style="dim")
-        hosts_table.add_column("IP")
-        hosts_table.add_column("Domain")
-        hosts_table.add_column("User")
-        hosts_table.add_column("Project Directory")
-        hosts_table.add_column("SSH Port")
-        hosts_table.add_column("Key Filename")
-        hosts_table.add_column("Env File")
-        hosts_table.add_column("Default", justify="center")
+        hosts_table.add_column("ip")
+        hosts_table.add_column("domain_name")
+        hosts_table.add_column("user")
+        hosts_table.add_column("password")
+        hosts_table.add_column("project_dr")
+        hosts_table.add_column("ssh_port")
+        hosts_table.add_column("key_filename")
+        hosts_table.add_column("envfile")
+        hosts_table.add_column("primary", justify="center")
 
         for host_name, host in config.hosts.items():
             host_dict = asdict(host)
@@ -45,11 +46,12 @@ class ShowConfig:
                 host_dict["ip"],
                 host_dict["domain_name"],
                 host_dict["user"],
+                str(host_dict["password"] or "N/A"),
                 host_dict.get("project_dir", "N/A"),
                 str(host_dict["ssh_port"]),
                 str(host_dict["key_filename"] or "N/A"),
                 str(host_dict["envfile"] or "N/A"),
-                "[green]Yes[/green]" if host_dict["default"] else "[red]No[/red]"
+                "[green]Yes[/green]" if host_dict["primary"] else "[red]No[/red]"
             )
 
         console.print(hosts_table)

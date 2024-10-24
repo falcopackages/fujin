@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
@@ -6,6 +8,7 @@ from typing import Annotated
 
 import cappa
 from fabric import Connection
+from invoke import Responder
 from tomlkit import parse
 
 
@@ -21,19 +24,19 @@ class Config:
     distfile: str
     envfile: Path
     aliases: dict[str, str]
-    hosts: dict[str, "Host"]
-    processes: dict[str, "Process"]
+    hosts: dict[str, Host]
+    processes: dict[str, Process]
     tasks: dict[str, str] = field(default_factory=dict)
     release_command: str | None = None
     requirements: Path = Path("requirements.txt")
 
     @cached_property
-    def default_host(self) -> "Host":
-        return [host for host in self.hosts.values() if host.default][0]
+    def primary_host(self) -> Host:
+        return [host for host in self.hosts.values() if host.primary][0]
 
     @classmethod
     @lru_cache
-    def read(cls) -> "Config":
+    def read(cls) -> Config:
         fujin_toml = Path("fujin.toml")
         if not fujin_toml.exists():
             raise ImproperlyConfiguredError(
@@ -89,10 +92,36 @@ class Host:
     ssh_port: int = 22
     key_filename: Path | None = None
     envfile: Path | None = None
-    default: bool = False
+    primary: bool = False
+
+    @property
+    def watchers(self) -> list[Responder]:
+        if not self.password:
+            return []
+        return [Responder(
+            pattern=r"\[sudo\] password:",
+            response=f"{self.password}\n",
+        )]
+
+    @cached_property
+    def connection(self) -> Connection:
+        connect_kwargs = None
+        if self.key_filename:
+            connect_kwargs = {"key_filename": str(self.key_filename)}
+        elif self.password:
+            connect_kwargs = {"password": self.password}
+        return Connection(
+            self.ip, user=self.user, port=self.ssh_port, connect_kwargs=connect_kwargs
+        )
+
+    def run_uv(self, args: str, **kwargs):
+        self.connection.run(f"/home/{self.user}/.cargo/bin/uv {args}", **kwargs)
+
+    def run_caddy(self, args: str, **kwargs):
+        self.connection.run(f"/home/{self.user}/.local/bin/caddy {args}", **kwargs)
 
     @classmethod
-    def parse(cls, hosts: dict, app: str) -> dict[str, "Host"]:
+    def parse(cls, hosts: dict, app: str) -> dict[str, Host]:
         default_project_dir = "/home/{user}/.local/share/fujin/{app}"
         parsed_hosts = {}
         single_host = len(hosts) == 1
@@ -112,22 +141,9 @@ class Host:
             if not h.project_dir:
                 h.project_dir = default_project_dir.format(user=h.user, app=app)
             if single_host:
-                h.default = True
+                h.primary = True
             parsed_hosts[name] = h
         return parsed_hosts
-
-    def get_connection(self) -> Connection:
-        connect_kwargs = None
-        if self.key_filename:
-            connect_kwargs = {"key_filename": str(self.key_filename)}
-        elif self.password:
-            connect_kwargs = {"password": self.password}
-        return Connection(
-            self.ip,
-            user=self.user,
-            port=self.ssh_port,
-            connect_kwargs=connect_kwargs
-        )
 
 
 @dataclass
@@ -137,7 +153,7 @@ class Process:
     bind: str | None = None
 
     @classmethod
-    def parse(cls, processes: dict) -> [str, "Process"]:
+    def parse(cls, processes: dict) -> [str, Process]:
         parsed_processes = {}
         for name, data in processes.items():
             try:

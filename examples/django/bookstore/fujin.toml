@@ -19,10 +19,11 @@ command = "!bookstore prodserver"
 [processes.worker]
 command = "!bookstore qcluster"
 
-[hosts.main]
+[hosts.primary]
 ip = "127.0.0.1"
 domain_name = "mybookstore.com"
 user = "test"
+password_env = "TEST_PASSWORD"
 key_filename = "./../../../id_rsa"
 ssh_port = 2222
-project_dir = ".local/share/fujin/bookstore" # relative to user home
+# project_dir = ".local/share/fujin/bookstore" # relative to user home

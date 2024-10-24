@@ -1,13 +1,14 @@
 import cappa
 from rich.traceback import install
 
+from fujin.commands.server import Server
 from fujin.commands.show_config import ShowConfig
 from fujin.config import Config
 
 
 @cappa.command(help="Deployment of python web apps in a breeze")
 class Fujin:
-    subcommands: cappa.Subcommands[ShowConfig]
+    subcommands: cappa.Subcommands[Server | ShowConfig]
 
 
 def main():
