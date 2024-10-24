@@ -1,8 +1,8 @@
 app = "bookstore"
-version = "echo '0.1.0'"
+version = "0.1.0"
+requirements = "requirements.txt"
 build_command = "uv build"
 release_command = "!bookstore migrate"
-requirements = "requirements.txt"
 distfile = "dist/bookstore-{version}-py3-none-any.whl"
 envfile = ".env.prod"
 

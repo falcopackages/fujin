@@ -1,8 +1,10 @@
 import os
 from dataclasses import dataclass, field
-from functools import cached_property
+from functools import cached_property, lru_cache
 from pathlib import Path
+from typing import Annotated
 
+import cappa
 from fabric import Connection
 from tomlkit import parse
 
@@ -30,6 +32,7 @@ class Config:
         return [host for host in self.hosts.values() if host.default][0]
 
     @classmethod
+    @lru_cache
     def read(cls) -> "Config":
         fujin_toml = Path("fujin.toml")
         if not fujin_toml.exists():
@@ -40,11 +43,11 @@ class Config:
         toml_data = parse(fujin_toml.read_text())
 
         try:
-            version = toml_data["version"]  # run command if necessary
             app = toml_data["app"]
+            version = toml_data["version"]
+            requirements = toml_data["requirements"]
             build_command = toml_data["build_command"]
             release_command = _expand_command(toml_data["release_command"])
-            requirements = Path(toml_data["requirements"])
             distfile = toml_data["distfile"].format(version=version)
             envfile = Path(toml_data["envfile"])
             hosts = Host.parse(toml_data["hosts"], app=app)
@@ -52,14 +55,6 @@ class Config:
             # TODO: do something with tasks
         except KeyError as e:
             raise ImproperlyConfiguredError(str(e)) from e
-
-        if not requirements.exists():
-            msg = f"File not found: {requirements}"
-            raise ImproperlyConfiguredError(msg)
-
-        if not envfile.exists():
-            msg = f"File not found: {envfile}"
-            raise ImproperlyConfiguredError(msg)
 
         aliases = {
             name: _expand_command(command)
@@ -78,6 +73,9 @@ class Config:
             distfile=distfile,
             envfile=envfile,
         )
+
+
+ConfigDep = Annotated[Config, cappa.Dep(Config.read)]
 
 
 @dataclass

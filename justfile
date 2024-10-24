@@ -34,7 +34,7 @@ dj-requirements:
 fujin *ARGS:
     #!/usr/bin/env bash
     cd examples/django/bookstore
-    ../../../.venv/bin/python -m fujin
+    ../../../.venv/bin/python -m fujin {{ ARGS }}
 
 # -------------------------------------------------------------------------
 # RELEASE UTILITIES
