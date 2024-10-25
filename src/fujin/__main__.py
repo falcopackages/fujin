@@ -2,8 +2,6 @@ import sys
 from pathlib import Path
 
 import cappa
-from rich.traceback import install
-from tomlkit import parse
 
 from fujin.commands.app import App
 from fujin.commands.config import ConfigCMD
@@ -11,6 +9,11 @@ from fujin.commands.deploy import Deploy
 from fujin.commands.redeploy import Redeploy
 from fujin.commands.server import Server
 from fujin.commands.up import Up
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 @cappa.command(help="Deployment of python web apps in a breeze")
@@ -31,7 +34,7 @@ def _parse_aliases() -> list[str] | None:
     fujin_toml = Path("fujin.toml")
     if not fujin_toml.exists():
         return
-    data = parse(fujin_toml.read_text())
+    data = tomllib.loads(fujin_toml.read_text())
     aliases = data.get("aliases")
     if not aliases:
         return

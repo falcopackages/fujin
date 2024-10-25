@@ -2,26 +2,28 @@
 #version = "0.1.0" infer from the pyproject.toml file
 requirements = "requirements.txt"
 build_command = "uv build"
-distfile = "dist/bookstore-{version}-py3-none-any.whl"
-envfile = ".env.prod"
+distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
 
 [hooks]
-pre_deploy = "!bookstore migrate"
+pre_deploy = ".venv/bin/bookstore migrate"
 
 [aliases]
 console = "app exec -i shell_plus"
 dbshell = "app exec -i dbshell"
+shell = "server exec -i bash"
 
 [processes]
-web = "!bookstore prodserver"
-worker = "!bookstore qcluster"
+web = ".venv/bin/bookstore prodserver"
+worker = ".venv/bin/bookstore qcluster"
 
 [hosts.primary]
+default = true
 ip = "127.0.0.1"
 domain_name = "mybookstore.com"
+envfile = ".env.prod"
 user = "test"
 password_env = "TEST_PASSWORD"
 key_filename = "./../../../id_rsa"
 ssh_port = 2222
-# project_dir = ".local/share/fujin/bookstore" # relative to user home
+# projects_dir = ".local/share/fujin" # relative to user home

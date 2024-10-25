@@ -1,12 +1,12 @@
 [Unit]
-Description={ app } Worker
+Description={app} Worker
 
 [Service]
-User={ user }
+User={user}
 Group=www-data
-WorkingDirectory={ host.project_dir }
-ExecStart={ command }
-EnvironmentFile={ host.project_dir }/.env
+WorkingDirectory={project_dir}
+ExecStart={command}
+EnvironmentFile={project_dir}/.env
 Restart=always
 #StandardOutput=append:/var/log/your_project/qcluster.out.log
 #StandardError=append:/var/log/your_project/qcluster.err.log
