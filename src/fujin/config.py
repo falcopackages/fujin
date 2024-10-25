@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import cached_property, cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 import cappa
 from fabric import Connection
@@ -32,6 +33,8 @@ class Config:
     release_command: str | None = None
     envfile: Path | None = None
     requirements: Path = field(default=lambda: Path("requirements.txt"))
+    bin_dir: ClassVar[str] = ".venv/bin/"
+    bin_dir_placeholder: ClassVar[str] = "!"
 
     @cached_property
     def primary_host(self) -> Host:
@@ -40,6 +43,12 @@ class Config:
     @cached_property
     def web_process(self) -> Process:
         return [process for name, process in self.processes.items() if name == "web"][0]
+
+    @classmethod
+    def expand_command(cls, command: str) -> str:
+        if command.startswith(cls.bin_dir_placeholder):
+            return command.replace(cls.bin_dir_placeholder, cls.bin_dir, 1)
+        return command
 
     @classmethod
     @cache
@@ -70,7 +79,7 @@ class Config:
         try:
             requirements = toml_data["requirements"]
             build_command = toml_data["build_command"]
-            release_command = _expand_command(toml_data["release_command"])
+            release_command = cls.expand_command(toml_data["release_command"])
             distfile = Path(toml_data["distfile"].format(version=version))
             envfile = Path(toml_data["envfile"])
             hosts = Host.parse(toml_data["hosts"], app=app)
@@ -87,7 +96,7 @@ class Config:
             python_version = py_version_file.read_text().strip()
 
         aliases = {
-            name: _expand_command(command)
+            name: cls.expand_command(command)
             for name, command in toml_data.get("aliases", {}).items()
         }
 
@@ -151,6 +160,11 @@ class Host:
     def run_caddy(self, args: str, **kwargs):
         self.connection.run(f"/home/{self.user}/.local/bin/caddy {args}", **kwargs)
 
+    @contextmanager
+    def cd_project_dir(self):
+        with self.connection.cd(self.project_dir):
+            yield
+
     @classmethod
     def parse(cls, hosts: dict, app: str) -> dict[str, Host]:
         default_project_dir = "/home/{user}/.local/share/fujin/{app}"
@@ -196,7 +210,7 @@ class Process:
         parsed_processes = {}
         for name, data in processes.items():
             try:
-                p = cls(bind=data.get("bind"), port=data.get("port"), command=_expand_command(data["command"]))
+                p = cls(bind=data.get("bind"), port=data.get("port"), command=Config.expand_command(data["command"]))
             except TypeError as e:
                 msg = f"Process {name} misconfigured: {e}"
                 raise ImproperlyConfiguredError(msg) from e
@@ -211,13 +225,3 @@ class Process:
             msg = "You need to have at least one process name web"
             raise ImproperlyConfiguredError(msg)
         return parsed_processes
-
-
-bin_dir = ".venv/bin/"
-bin_dir_placeholder = "!"
-
-
-def _expand_command(command: str):
-    if command.startswith(bin_dir_placeholder):
-        return command.replace(bin_dir_placeholder, bin_dir, 1)
-    return command

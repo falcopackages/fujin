@@ -6,7 +6,7 @@ from typing import Annotated
 import cappa
 from cappa.output import Output
 
-from fujin.commands.base import BaseCommand
+from fujin.commands.base import HostCommand
 from fujin.config import ConfigDep
 
 
@@ -16,7 +16,8 @@ class Server:
 
 
 @cappa.command(help="Setup uv, caddy and install some dependencies")
-class Bootstrap(BaseCommand):
+@dataclass
+class Bootstrap(HostCommand):
     _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
 
     def __call__(self, config: ConfigDep, output: Output):
@@ -36,10 +37,10 @@ class Bootstrap(BaseCommand):
 
 
 @cappa.command(help="Run arbitrary command on the server")
-@dataclass(frozen=True)
-class Exec(BaseCommand):
+@dataclass
+class Exec(HostCommand):
     command: str
-    interactive: bool = False
+    interactive: Annotated[bool, cappa.Arg(default=False, short="-i")]
 
     def __call__(self, config: ConfigDep, output: Output):
         host = self.host(config)
@@ -51,8 +52,8 @@ class Exec(BaseCommand):
 
 
 @cappa.command(help="Create a new user with sudo and ssh access")
-@dataclass(frozen=True)
-class CreateUser(BaseCommand):
+@dataclass
+class CreateUser(HostCommand):
     name: str
 
     def __call__(self, config: ConfigDep, output: Output):

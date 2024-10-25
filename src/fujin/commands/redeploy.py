@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import cappa
 
-from fujin.commands.base import BaseCommand
+from fujin.commands.base import HostCommand
 from fujin.config import ConfigDep, Process
 from .deploy import Deploy
 
 
 @cappa.command(help="Redeploy for code changes and env change")
-class Redeploy(BaseCommand):
+class Redeploy(HostCommand):
 
     def __call__(self, config: ConfigDep, output: cappa.Output):
         host = self.host(config)

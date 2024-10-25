@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import cache
 from typing import Annotated
 
 import cappa
@@ -7,7 +6,7 @@ import cappa
 from fujin.config import Config, Host
 
 
-@dataclass(frozen=True)
+@dataclass
 class BaseCommand:
     _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
 
@@ -19,3 +18,14 @@ class BaseCommand:
             return config.hosts[self._host]
         except KeyError as e:
             raise cappa.Exit(f"Host {self._host} does not exist", code=1) from e
+
+
+@dataclass
+class HostCommand(BaseCommand):
+    @property
+    def config(self) -> Config:
+        return Config.read()
+
+    @property
+    def stdout(self) -> cappa.Output:
+        return cappa.Output()

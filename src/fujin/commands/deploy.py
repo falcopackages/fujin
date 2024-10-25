@@ -8,12 +8,12 @@ from pathlib import Path
 
 import cappa
 
-from fujin.commands.base import BaseCommand
+from fujin.commands.base import HostCommand
 from fujin.config import ConfigDep, ImproperlyConfiguredError, Config, Host, Process
 
 
 @cappa.command(help="Deploy project")
-class Deploy(BaseCommand):
+class Deploy(HostCommand):
 
     def __call__(self, config: ConfigDep, output: cappa.Output):
         host = self.host(config)

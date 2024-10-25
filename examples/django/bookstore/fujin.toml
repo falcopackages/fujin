@@ -7,9 +7,8 @@ distfile = "dist/bookstore-{version}-py3-none-any.whl"
 envfile = ".env.prod"
 
 [aliases]
-console = "!bookstore shell_plus"
-migrate = "!bookstore migrate"
-shell_plus = "!bookstore shell_plus"
+console = "app exec -i shell_plus"
+dbshell = "app exec -i dbshell"
 
 [processes.web]
 port = 8000
