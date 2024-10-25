@@ -12,7 +12,7 @@ class Server(HostCommand):
 
     @cappa.command(help="Show host info")
     def info(self):
-        self.stdout.output(self.host.sudo("cat /etc/os-release", hide='out'))
+        self.stdout.output(self.host.sudo("cat /etc/os-release", hide="out"))
 
     @cappa.command(help="Setup uv, caddy and install some dependencies")
     def bootstrap(self):
@@ -27,14 +27,20 @@ class Server(HostCommand):
         self.stdout.output("[green]Server bootstrap Done![/green]")
 
     @cappa.command(help="Run arbitrary command on the server")
-    def exec(self, command: str, interactive: Annotated[bool, cappa.Arg(default=False, short="-i")]):
+    def exec(
+        self,
+        command: str,
+        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+    ):
         if interactive:
             self.host.connection.run(command, pty=interactive)
         else:
             result = self.host.connection.run(command, hide=True)
             self.stdout.output(result)
 
-    @cappa.command(name="create-user", help="Create a new user with sudo and ssh access")
+    @cappa.command(
+        name="create-user", help="Create a new user with sudo and ssh access"
+    )
     def create_user(self, name: str):
         # TODO not working right now, ssh key not working
         self.host.sudo(f"adduser --disabled-password --gecos '' {name}")
@@ -43,5 +49,7 @@ class Server(HostCommand):
         self.host.sudo(f"chown -R {name}:{name} /home/{name}/.ssh")
         self.host.sudo(f"chmod 700 /home/{name}/.ssh")
         self.host.sudo(f"chmod 600 /home/{name}/.ssh/authorized_keys")
-        self.host.sudo(f"echo '{name} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers")
+        self.host.sudo(
+            f"echo '{name} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers"
+        )
         self.stdout.output(f"[green]New user {name} created[/green]")

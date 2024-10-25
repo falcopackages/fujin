@@ -13,12 +13,20 @@ from fujin.commands.base import HostCommand
 class App(HostCommand):
 
     @cappa.command(help="Run arbitrary command via the app binary")
-    def exec(self, command: str, interactive: Annotated[bool, cappa.Arg(default=False, short="-i")]):
+    def exec(
+        self,
+        command: str,
+        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+    ):
         with self.host.cd_project_dir(self.config.app):
             if interactive:
-                self.host.connection.run(f"{self.config.app_bin} {command}", pty=interactive)
+                self.host.connection.run(
+                    f"{self.config.app_bin} {command}", pty=interactive
+                )
             else:
-                result = self.host.connection.run(f"{self.config.app_bin} {command}", hide=True)
+                result = self.host.connection.run(
+                    f"{self.config.app_bin} {command}", hide=True
+                )
                 self.stdout.output(result)
 
     @cappa.command(help="Logs")

@@ -21,9 +21,9 @@ try:
 except ImportError:
     from enum import Enum
 
-
     class StrEnum(str, Enum):
         pass
+
 
 if TYPE_CHECKING:
     from .host import Host
@@ -80,7 +80,8 @@ class Config(msgspec.Struct, kw_only=True):
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
             raise ValueError(
-                "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy")
+                "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy"
+            )
 
     @property
     def distfile(self) -> Path:
@@ -162,4 +163,6 @@ class Webserver(msgspec.Struct):
         try:
             return getattr(module, "WebProxy")(host=host, config=config)
         except KeyError as e:
-            raise ImproperlyConfiguredError(f"Missing proxy class in {self.type}") from e
+            raise ImproperlyConfiguredError(
+                f"Missing proxy class in {self.type}"
+            ) from e

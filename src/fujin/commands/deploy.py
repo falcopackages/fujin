@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,11 +23,14 @@ class Deploy(HostCommand):
         self.host.make_project_dir(project_name=self.config.app)
         self.transfer_files()
         self.install_project()
+        if pre_deploy := self.config.hooks.get(Hook.PRE_DEPLOY):
+            self.host.run(pre_deploy)
 
         systemd_files = self.get_systemd_files()
         for systemd_file in systemd_files:
             self.host.sudo(
-                f"echo '{systemd_file.content}' | sudo tee {systemd_file.filepath}", hide='out',
+                f"echo '{systemd_file.content}' | sudo tee {systemd_file.filepath}",
+                hide="out",
             )
 
         self.host.sudo(f"systemctl enable --now {self.config.app}.socket")
@@ -59,12 +61,10 @@ class Deploy(HostCommand):
             self.host.run_uv("venv")
             self.host.run_uv("pip install -r requirements.txt")
             self.host.run_uv(f"pip install {self.config.distfile.name}")
-            if pre_deploy := self.config.hooks.get(Hook.PRE_DEPLOY):
-                self.host.run(pre_deploy)
 
     def get_systemd_files(self) -> list[SystemdFile]:
         templates_folder = (
-                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()

@@ -40,10 +40,10 @@ class Host:
         )
 
     def run(self, args: str, **kwargs):
-        return self.connection.run(args, **kwargs)
+        return self.connection.run(args, **kwargs, watchers=self.watchers)
 
     def sudo(self, args: str, **kwargs):
-        return self.connection.sudo(args, **kwargs, watchers=self.watchers)
+        return self.connection.sudo(args, **kwargs)
 
     def run_uv(self, args: str, **kwargs):
         return self.run(f"/home/{self.config.user}/.cargo/bin/uv {args}", **kwargs)

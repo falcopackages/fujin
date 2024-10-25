@@ -16,9 +16,7 @@ class WebProxy(msgspec.Struct):
 
     def configure(self):
         with self.host.cd_project_dir(self.config.app):
-            self.host.run(
-                f"echo '{json.dumps(self._generate_config())}' > caddy.json"
-            )
+            self.host.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")
             self.host.run(
                 f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
             )
@@ -32,19 +30,15 @@ class WebProxy(msgspec.Struct):
                             "listen": [":443"],
                             "routes": [
                                 {
-                                    "match": [{
-                                        "host": [self.host.config.domain_name]
-                                    }],
+                                    "match": [{"host": [self.host.config.domain_name]}],
                                     "handle": [
                                         {
                                             "handler": "reverse_proxy",
                                             "upstreams": [
-                                                {
-                                                    "dial": self.config.webserver.upstream
-                                                }
-                                            ]
+                                                {"dial": self.config.webserver.upstream}
+                                            ],
                                         }
-                                    ]
+                                    ],
                                 }
                             ],
                         }

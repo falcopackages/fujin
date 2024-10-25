@@ -1,5 +1,6 @@
-from __future__ import  annotations
-from typing import Protocol, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from fujin.config import Config
@@ -10,8 +11,6 @@ class WebProxy(Protocol):
     host: Host
     config: Config
 
-    def install(self) -> None:
-        ...
+    def install(self) -> None: ...
 
-    def configure(self) -> None:
-        ...
+    def configure(self) -> None: ...
