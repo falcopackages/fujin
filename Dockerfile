@@ -32,7 +32,7 @@ RUN service ssh start
 EXPOSE 22
 
 # Run the SSH server
-#CMD ["/usr/sbin/sshd", "-D"]
+CMD ["/usr/sbin/sshd", "-D"]
 #VOLUME [ "/sys/fs/cgroup" ]
 #CMD ["/lib/systemd/systemd"]
 #VOLUME [ "/sys/fs/cgroup" ]

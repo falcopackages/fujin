@@ -19,7 +19,7 @@ class Fujin:
 
 
 def main():
-    install(show_locals=True)
+    # install(show_locals=True)
     alias_cmd = _parse_aliases()
     if alias_cmd:
         cappa.invoke(Fujin, argv=alias_cmd)

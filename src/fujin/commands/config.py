@@ -3,36 +3,29 @@ from __future__ import annotations
 from dataclasses import asdict
 
 import cappa
-from cappa import Output
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from fujin.config import ConfigDep
+from fujin.commands.base import BaseCommand
 
-
-# TODO show config docs
 
 @cappa.command(name="config", help="Config management")
-class ConfigCMD:
-    subcommands: cappa.Subcommands[Init | Show | Docs]
+class ConfigCMD(BaseCommand):
 
-
-@cappa.command(help="Show parsed configuration")
-class Show:
-    def __call__(self, config: ConfigDep):
+    @cappa.command(help="Show parsed configuration")
+    def show(self):
         console = Console()
 
         general_config = {
-            "app": config.app,
-            "version": config.version,
-            "python_version": config.python_version,
-            "build_command": config.build_command,
-            "distfile": config.distfile,
-            "envfile": config.envfile,
-            "release_command": config.release_command or "N/A",
-            "requirements": config.requirements
+            "app": self.config.app,
+            "version": self.config.version,
+            "python_version": self.config.python_version,
+            "build_command": self.config.build_command,
+            "distfile": self.config.distfile,
+            "envfile": self.config.envfile,
+            "requirements": self.config.requirements
         }
         formatted_text = "\n".join(f"[bold green]{key}:[/bold green] {value}" for key, value in general_config.items())
         console.print(Panel(formatted_text, title="General Configuration", border_style="green", width=100))
@@ -50,7 +43,7 @@ class Show:
         hosts_table.add_column("envfile")
         hosts_table.add_column("primary", justify="center")
 
-        for host_name, host in config.hosts.items():
+        for host_name, host in self.config.hosts.items():
             host_dict = asdict(host)
             hosts_table.add_row(
                 host_name,
@@ -74,7 +67,7 @@ class Show:
         processes_table.add_column("Port")
         processes_table.add_column("Bind Address")
 
-        for process_name, process in config.processes.items():
+        for process_name, process in self.config.processes.items():
             process_dict = asdict(process)
             processes_table.add_row(
                 process_name,
@@ -89,22 +82,18 @@ class Show:
         aliases_table = Table(title="Aliases", header_style="bold cyan")
         aliases_table.add_column("Alias", style="dim")
         aliases_table.add_column("Command")
-        for alias, command in config.aliases.items():
+        for alias, command in self.config.aliases.items():
             aliases_table.add_row(alias, command)
 
         console.print(aliases_table)
 
+    @cappa.command(help="Generate a sample configuration file")
+    def init(self):
+        pass
 
-@cappa.command(help="Generate a sample configuration file")
-class Init:
-    pass
-
-
-@cappa.command(help="Config documentation")
-class Docs:
-
-    def __call__(self, output: Output):
-        output.output(Markdown(docs))
+    @cappa.command(help="Config documentation")
+    def docs(self):
+        self.stdout.output(Markdown(docs))
 
 
 docs = """

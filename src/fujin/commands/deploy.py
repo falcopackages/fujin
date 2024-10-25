@@ -9,92 +9,85 @@ from pathlib import Path
 import cappa
 
 from fujin.commands.base import HostCommand
-from fujin.config import ConfigDep, ImproperlyConfiguredError, Config, Host, Process
+from fujin.config import ImproperlyConfiguredError, Hook
 
 
 @cappa.command(help="Deploy project")
 class Deploy(HostCommand):
 
-    def __call__(self, config: ConfigDep, output: cappa.Output):
-        host = self.host(config)
+    def __call__(self):
         try:
-            subprocess.run(config.release_command.split(), check=True)
+            subprocess.run(self.config.build_command.split(), check=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
 
-        host.connection.run(f"mkdir -p {host.project_dir}")
-        self.transfer_files(host, config)
-        self.install_project(host, config)
+        self.host.run(f"mkdir -p {self.host.project_dir}")
+        self.transfer_files()
+        self.install_project()
 
-        systemd_files = self.get_systemd_files(host=host, config=config)
+        systemd_files = self.get_systemd_files()
         for systemd_file in systemd_files:
-            host.connection.sudo(
+            self.host.connection.sudo(
                 f"echo '{systemd_file.content}' > {systemd_file.filepath}"
             )
 
-        host.connection.sudo(f"systemctl enable --now {config.app}.socket")
-        host.connection.sudo(f"systemctl daemon-reload")
-        self.restart_all_services(
-            *(service.name for service in systemd_files), host=host
-        )
+        self.host.connection.sudo(f"systemctl enable --now {self.config.app}.socket")
+        self.host.connection.sudo(f"systemctl daemon-reload")
+        self.restart_services()
 
-        with host.connection.cd(host.project_dir):
-            host.run(
-                f"echo '{json.dumps(self.get_caddy_config(host=host, config=config))} > caddy.json"
+        with self.host.connection.cd(self.host.project_dir):
+            self.host.run(
+                f"echo '{json.dumps(self.get_caddy_config())}' > caddy.json"
             )
-            host.run(
+            self.host.run(
                 f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
             )
 
-    @classmethod
-    def transfer_files(cls, host: Host, config: Config):
-        envfile = host.envfile or config.envfile
+    def transfer_files(self):
+        envfile = self.host.envfile or self.config.envfile
         if not envfile:
             raise ImproperlyConfiguredError(
-                f"Missing envfile in both top config and {host.name} configuration"
+                f"Missing envfile in both top config and {self.host.name} configuration"
             )
         if not envfile.exists():
             raise cappa.Exit(f"{envfile} not found", code=1)
 
-        if not config.requirements.exists():
-            raise cappa.Exit(f"{config.requirements} not found", code=1)
-        host.connection.put(
-            str(config.requirements), f"{host.project_dir}/requirements.txt"
+        if not self.config.requirements.exists():
+            raise cappa.Exit(f"{self.config.requirements} not found", code=1)
+        self.host.connection.put(
+            str(self.config.requirements), f"{self.host.project_dir}/requirements.txt"
         )
-        host.connection.put(str(envfile), f"{host.project_dir}/.env")
-        host.connection.put(
-            str(config.distfile), f"{host.project_dir}/{config.distfile.name}"
+        self.host.connection.put(str(envfile), f"{self.host.project_dir}/.env")
+        self.host.connection.put(
+            str(self.config.distfile), f"{self.host.project_dir}/{self.config.distfile.name}"
         )
-        host.connection.run(f"echo {config.python_version} > .python-version")
+        self.host.connection.run(f"echo {self.config.python_version} > .python-version")
 
-    @classmethod
-    def install_project(cls, host: Host, config: Config):
-        with host.connection.cd(host.project_dir):
-            host.run_uv("sync")
-            host.run_uv(f"pip install {config.distfile.name}")
-            if config.release_command:
-                host.run(config.release_command)
+    def install_project(self):
+        with self.host.connection.cd(self.host.project_dir):
+            self.host.run_uv("sync")
+            self.host.run_uv(f"pip install {self.config.distfile.name}")
+            if pre_deploy := self.config.hooks.get(Hook.PRE_DEPLOY):
+                self.host.run(pre_deploy)
 
-    @classmethod
-    def get_caddy_config(cls, host: Host, config: Config) -> dict:
-        upstream = f"localhost:{config.web_process.port}" if config.web_process.port else config.web_process.bind
+    def get_caddy_config(self) -> dict:
         return {
             "apps": {
                 "http": {
                     "servers": {
-                        config.app: {
+                        self.config.app: {
                             "listen": [":443"],
                             "routes": [
                                 {
                                     "match": [{
-                                        "host": [host.domain_name]
+                                        "self.host": [self.host.domain_name]
                                     }],
                                     "handle": [
                                         {
                                             "handler": "reverse_proxy",
                                             "upstreams": [
                                                 {
-                                                    "dial": upstream
+                                                    "dial": self.config.webserver.upstream
                                                 }
                                             ]
                                         }
@@ -107,8 +100,8 @@ class Deploy(HostCommand):
             }
         }
 
-    @classmethod  # TODO probably cache this
-    def get_systemd_files(cls, host: Host, config: Config) -> list[SystemdFile]:
+    # TODO probably cache this
+    def get_systemd_files(self) -> list[SystemdFile]:
 
         templates_folder = (
                 Path(importlib.util.find_spec("fujin").origin).parent / "templates"
@@ -117,38 +110,38 @@ class Deploy(HostCommand):
         web_socket_content = (templates_folder / "web.socket").read_text()
         other_service_content = (templates_folder / "other.service").read_text()
         context = {
-            "app": config.app,
-            "user": host.user,
-            "project_dir": host.project_dir,
+            "app": self.config.app,
+            "user": self.host.user,
+            "project_dir": self.host.project_dir,
         }
         files = [
             SystemdFile(
-                name=f"{Process.service_name(app=config.app, name='web')}.service",
+                name=f"{self.config.get_service_name('web')}.service",
                 content=web_service_content.format(
-                    **context, command=config.web_process.command
+                    **context, command=self.config.web_process
                 ),
             ),
             SystemdFile(
-                name=f"{config.app}.socket",
+                name=f"{self.config.app}.socket",
                 content=web_socket_content.format(**context),
             ),
         ]
-        for name, process in config.processes.items():
+        for name, command in self.config.processes.items():
             if name != "web":
                 files.append(
                     SystemdFile(
-                        name=f"{Process.service_name(app=config.app, name='web')}.service",
+                        name=f"{self.config.get_service_name(name)}.service",
                         content=other_service_content.format(
-                            **context, command=process.command
+                            **context, command=command
                         ),
                     )
                 )
         return files
 
-    @classmethod
-    def restart_all_services(cls, *names, host: Host) -> None:
+    def restart_services(self, *names) -> None:
+        names = names or self.config.services
         for name in names:
-            host.connection.sudo(f"systemctl restart {name}")
+            self.host.connection.sudo(f"systemctl restart {name}")
 
 
 @dataclass

@@ -16,13 +16,12 @@ class App(HostCommand):
 
     @cappa.command(help="Run arbitrary command via the app binary")
     def exec(self, command: str, interactive: Annotated[bool, cappa.Arg(default=False, short="-i")]):
-        host = self.host(self.config)
         app_bin = f"{self.config.bin_dir}{self.config.app}"
-        with host.cd_project_dir():
+        with self.host.cd_project_dir():
             if interactive:
-                host.connection.run(f"{app_bin} {command}", pty=interactive)
+                self.host.connection.run(f"{app_bin} {command}", pty=interactive)
             else:
-                result = host.connection.run(f"{app_bin} {command}", hide=True)
+                result = self.host.connection.run(f"{app_bin} {command}", hide=True)
                 self.stdout.output(result)
 
     @cappa.command(help="Logs")

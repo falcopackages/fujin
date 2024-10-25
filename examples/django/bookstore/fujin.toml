@@ -1,22 +1,21 @@
-#app = "bookstore"
-#version = "0.1.0"
+#app = "bookstore" infer from the pyproject.toml file
+#version = "0.1.0" infer from the pyproject.toml file
 requirements = "requirements.txt"
 build_command = "uv build"
-release_command = "!bookstore migrate"
 distfile = "dist/bookstore-{version}-py3-none-any.whl"
 envfile = ".env.prod"
+webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
+
+[hooks]
+pre_deploy = "!bookstore migrate"
 
 [aliases]
 console = "app exec -i shell_plus"
 dbshell = "app exec -i dbshell"
 
-[processes.web]
-port = 8000
-# bind = "unix:/run/bookstore.sock" # bind and port are mutually exclusive
-command = "!bookstore prodserver"
-
-[processes.worker]
-command = "!bookstore qcluster"
+[processes]
+web = "!bookstore prodserver"
+worker = "!bookstore qcluster"
 
 [hosts.primary]
 ip = "127.0.0.1"

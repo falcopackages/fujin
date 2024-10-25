@@ -1,23 +1,28 @@
 from __future__ import annotations
 
-import os
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import cached_property, cache
 from pathlib import Path
 from typing import Annotated, ClassVar
 
 import cappa
-from fabric import Connection
-from invoke import Responder
 from tomlkit import parse
 
+from .errors import ImproperlyConfiguredError
 
-class ImproperlyConfiguredError(cappa.Exit):
-    code = 1
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
 
 
-# TODO: move these dataclasses to attrs or msgspec, should simplify some part of the logic and do type conversion in a declarative way
+    class StrEnum(str, Enum):
+        pass
+
+from .host import Host
+class Hook(StrEnum):
+    PRE_DEPLOY = "pre_deploy"
+
 
 @dataclass(frozen=True)
 class Config:
@@ -28,11 +33,13 @@ class Config:
     distfile: Path
     aliases: dict[str, str]
     hosts: dict[str, Host]
-    processes: dict[str, Process]
-    tasks: dict[str, str] = field(default_factory=dict)
-    release_command: str | None = None
+    processes: dict[str, str]
+    webserver: Webserver
     envfile: Path | None = None
     requirements: Path = field(default=lambda: Path("requirements.txt"))
+    hooks: dict[Hook, str] = field(default=dict)
+    # custom_commands: list[str, str] = field(default_factory=list) # list of capp command modules
+
     bin_dir: ClassVar[str] = ".venv/bin/"
     bin_dir_placeholder: ClassVar[str] = "!"
 
@@ -41,8 +48,17 @@ class Config:
         return [host for host in self.hosts.values() if host.primary][0]
 
     @cached_property
-    def web_process(self) -> Process:
-        return [process for name, process in self.processes.items() if name == "web"][0]
+    def web_process(self) -> str:
+        return [value for key, value in self.processes.items() if key == "web"][0]
+
+    def get_service_name(self, name: str):
+        if name == "web":
+            return self.app
+        return f"{self.app}-{name}"
+
+    @cached_property
+    def services(self) -> list[str]:
+        return [self.get_service_name(name) for name in self.processes]
 
     @classmethod
     def expand_command(cls, command: str) -> str:
@@ -79,14 +95,18 @@ class Config:
         try:
             requirements = toml_data["requirements"]
             build_command = toml_data["build_command"]
-            release_command = cls.expand_command(toml_data["release_command"])
             distfile = Path(toml_data["distfile"].format(version=version))
             envfile = Path(toml_data["envfile"])
+            hooks = toml_data.get("hooks", {})
             hosts = Host.parse(toml_data["hosts"], app=app)
-            processes = Process.parse(toml_data["processes"])
+            processes = toml_data["processes"]
+            webserver = toml_data["webserver"]
             # TODO: do something with tasks
         except KeyError as e:
             raise ImproperlyConfiguredError(str(e)) from e
+
+        if "web" not in processes:
+            raise ImproperlyConfiguredError("You need to define a web process")
 
         python_version = toml_data.get("python_version")
         if not python_version:
@@ -109,119 +129,18 @@ class Config:
             hosts=hosts,
             requirements=requirements,
             build_command=build_command,
-            release_command=release_command,
+            hooks=hooks,
             distfile=distfile,
             envfile=envfile,
+            webserver=webserver
         )
+
+
 
 
 ConfigDep = Annotated[Config, cappa.Dep(Config.read)]
 
 
 @dataclass(frozen=True)
-class Host:
-    ip: str
-    domain_name: str
-    user: str
-    project_dir: str | None = None
-    password: str | None = field(default=None, init=False)
-    password_env: str | None = None
-    ssh_port: int = 22
-    key_filename: Path | None = None
-    envfile: Path | None = None
-    primary: bool = False
-
-    @property
-    def watchers(self) -> list[Responder]:
-        if not self.password:
-            return []
-        return [Responder(
-            pattern=r"\[sudo\] password:",
-            response=f"{self.password}\n",
-        )]
-
-    @cached_property
-    def connection(self) -> Connection:
-        connect_kwargs = None
-        if self.key_filename:
-            connect_kwargs = {"key_filename": str(self.key_filename)}
-        elif self.password:
-            connect_kwargs = {"password": self.password}
-        return Connection(
-            self.ip, user=self.user, port=self.ssh_port, connect_kwargs=connect_kwargs
-        )
-
-    def run(self, args: str, **kwargs):
-        self.connection.run(args, **kwargs)
-
-    def run_uv(self, args: str, **kwargs):
-        self.connection.run(f"/home/{self.user}/.cargo/bin/uv {args}", **kwargs)
-
-    def run_caddy(self, args: str, **kwargs):
-        self.connection.run(f"/home/{self.user}/.local/bin/caddy {args}", **kwargs)
-
-    @contextmanager
-    def cd_project_dir(self):
-        with self.connection.cd(self.project_dir):
-            yield
-
-    @classmethod
-    def parse(cls, hosts: dict, app: str) -> dict[str, Host]:
-        default_project_dir = "/home/{user}/.local/share/fujin/{app}"
-        parsed_hosts = {}
-        single_host = len(hosts) == 1
-        for name, data_ in hosts.items():
-            data = data_.copy()
-            if password_env := data.get("password_env"):
-                password = os.getenv(password_env)
-                if not password:
-                    msg = f"Env {password_env} can not be found"
-                    raise ImproperlyConfiguredError(msg)
-            # if "ssh_port" in data:
-            data["ssh_port"] = 3000  # int(data.get("ssh_port"))
-            if not data.get("project_dir"):
-                data["project_dir"] = default_project_dir.format(user=data["user"], app=app)
-            if single_host:
-                data["primary"] = True
-            try:
-                print(data)
-                parsed_hosts[name] = Host(**data)
-            except TypeError as e:
-                msg = f"Host {name} misconfigured: {e}"
-                raise ImproperlyConfiguredError(msg) from e
-
-        return parsed_hosts
-
-
-@dataclass(frozen=True)
-class Process:
-    command: str
-    port: int | None = None
-    bind: str | None = None
-
-    @classmethod
-    def service_name(cls, app: str, name: str):
-        if name == "web":
-            return app
-        return f"{app}-{name}"
-
-    @classmethod
-    def parse(cls, processes: dict) -> [str, Process]:
-        parsed_processes = {}
-        for name, data in processes.items():
-            try:
-                p = cls(bind=data.get("bind"), port=data.get("port"), command=Config.expand_command(data["command"]))
-            except TypeError as e:
-                msg = f"Process {name} misconfigured: {e}"
-                raise ImproperlyConfiguredError(msg) from e
-            if p.bind and p.port:
-                msg = f"Process {name} misconfigured: cannot have both bind and port property set at the same time"
-                raise ImproperlyConfiguredError(msg)
-            if name == "web" and (not p.bind and not p.port):
-                msg = f"Process {name} misconfigured: need to have at least on of port or bind property set for the web process"
-                raise ImproperlyConfiguredError(msg)
-            parsed_processes[name] = p
-        if "web" not in parsed_processes:
-            msg = "You need to have at least one process name web"
-            raise ImproperlyConfiguredError(msg)
-        return parsed_processes
+class Webserver:
+    upstream: str
