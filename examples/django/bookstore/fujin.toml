@@ -9,7 +9,7 @@ webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
 pre_deploy = ".venv/bin/bookstore migrate"
 
 [aliases]
-console = "app exec -i shell_plus"
+console = "app exec -i shell"
 dbshell = "app exec -i dbshell"
 shell = "server exec -i bash"
 

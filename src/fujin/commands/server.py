@@ -23,8 +23,7 @@ class Server(HostCommand):
         if not result.ok:
             self.host.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
             self.host.run_uv("tool update-shell")
-        self.host.run_uv("tool install caddy-bin")
-        self.host.run_caddy("start", pty=True)
+        self.config.webserver.get_proxy(host=self.host, config=self.config).install()
         self.stdout.output("[green]Server bootstrap Done![/green]")
 
     @cappa.command(help="Run arbitrary command on the server")

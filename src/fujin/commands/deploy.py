@@ -35,13 +35,7 @@ class Deploy(HostCommand):
         self.host.sudo(f"systemctl daemon-reload")
         self.restart_services()
 
-        with self.host.cd_project_dir(self.config.app):
-            self.host.run(
-                f"echo '{json.dumps(self.get_caddy_config())}' > caddy.json"
-            )
-            self.host.run(
-                f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
-            )
+        self.config.webserver.get_proxy(host=self.host, config=self.config).configure()
         self.stdout.output("[green]Deployment completed![/green]")
 
     def transfer_files(self):
@@ -67,36 +61,6 @@ class Deploy(HostCommand):
             self.host.run_uv(f"pip install {self.config.distfile.name}")
             if pre_deploy := self.config.hooks.get(Hook.PRE_DEPLOY):
                 self.host.run(pre_deploy)
-
-    def get_caddy_config(self) -> dict:
-        return {
-            "apps": {
-                "http": {
-                    "servers": {
-                        self.config.app: {
-                            "listen": [":443"],
-                            "routes": [
-                                {
-                                    "match": [{
-                                        "host": [self.host.config.domain_name]
-                                    }],
-                                    "handle": [
-                                        {
-                                            "handler": "reverse_proxy",
-                                            "upstreams": [
-                                                {
-                                                    "dial": self.config.webserver.upstream
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ],
-                        }
-                    }
-                }
-            }
-        }
 
     def get_systemd_files(self) -> list[SystemdFile]:
         templates_folder = (

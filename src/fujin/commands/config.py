@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+
 
 import cappa
 from rich.console import Console
@@ -26,7 +26,7 @@ class ConfigCMD(BaseCommand):
             "build_command": self.config.build_command,
             "distfile": self.config.distfile,
             "requirements": self.config.requirements,
-            "webserver":f"{{ upstream = {self.config.webserver.upstream} }}"
+            "webserver":f"{{ upstream = '{self.config.webserver.upstream}', type = '{self.config.webserver.type}' }}"
         }
         formatted_text = "\n".join(f"[bold green]{key}:[/bold green] {value}" for key, value in general_config.items())
         console.print(Panel(formatted_text, title="General Configuration", border_style="green", width=100))

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import msgspec
 
 from .errors import ImproperlyConfiguredError
+from .proxies import WebProxy
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -18,8 +21,12 @@ try:
 except ImportError:
     from enum import Enum
 
+
     class StrEnum(str, Enum):
         pass
+
+if TYPE_CHECKING:
+    from .host import Host
 
 
 class Hook(StrEnum):
@@ -147,3 +154,11 @@ class HostConfig(msgspec.Struct, kw_only=True):
 
 class Webserver(msgspec.Struct):
     upstream: str
+    type: str = "fujin.proxies.caddy"
+
+    def get_proxy(self, host: Host, config: Config) -> WebProxy:
+        module = importlib.import_module(self.type)
+        try:
+            return getattr(module, "WebProxy")(host=host, config=config)
+        except KeyError as e:
+            raise ImproperlyConfiguredError(f"Missing proxy class in {self.type}") from e
