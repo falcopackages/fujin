@@ -78,8 +78,9 @@ class Config(msgspec.Struct, kw_only=True):
         self.app_bin = self.app_bin.format(app=self.app)
         self._distfile = self._distfile.format(version=self.version)
 
-        if "web" not in self.processes:
-            raise ValueError("You need to define a web process")
+        if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
+            raise ValueError(
+                "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy")
 
     @property
     def distfile(self) -> Path:
