@@ -6,7 +6,7 @@
 -----
 
 > [!IMPORTANT]
-> This package currently contains no features and is a work-in-progress
+> This package currently contains minimal features and is a work-in-progress
 
 
 **Table of Contents**

@@ -18,9 +18,9 @@ class App(AppCommand):
     ):
         with self.host.cd_project_dir(self.config.app):
             if interactive:
-                self.host.run(f"{self.config.app_bin} {command}", pty=interactive)
+                self.host.run(f"source .env && {self.config.app_bin} {command}", pty=interactive)
             else:
-                result = self.host.run(f"{self.config.app_bin} {command}", hide=True)
+                result = self.host.run(f"source .env && {self.config.app_bin} {command}", hide=True)
                 self.stdout.output(result)
 
     @cappa.command(
