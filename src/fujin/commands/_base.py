@@ -1,3 +1,4 @@
+import importlib
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Annotated
@@ -6,7 +7,10 @@ import cappa
 
 from fujin.config import Config
 from fujin.errors import ImproperlyConfiguredError
+from fujin.hooks import HookManager
 from fujin.host import Host
+from fujin.proxies import WebProxy
+from fujin.systemd import Systemd
 
 
 @dataclass
@@ -21,7 +25,12 @@ class BaseCommand:
 
 
 @dataclass
-class HostCommand(BaseCommand):
+class AppCommand(BaseCommand):
+    """
+    A command that provides access to the current host and allows interaction with it,
+    including configuring the web proxy and managing systemd services.
+    """
+
     _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
 
     @cached_property
@@ -41,8 +50,26 @@ class HostCommand(BaseCommand):
                     for name, hc in self.config.hosts.items()
                     if self._host in [name, hc.ip]
                 ),
-                None
+                None,
             )
         if not host_config:
             raise cappa.Exit(f"Host {self._host} does not exist", code=1)
         return Host(config=host_config)
+
+    @cached_property
+    def web_proxy(self) -> WebProxy:
+        module = importlib.import_module(self.config.webserver.type)
+        try:
+            return getattr(module, "WebProxy")(host=self.host, config=self.config)
+        except KeyError as e:
+            raise ImproperlyConfiguredError(
+                f"Missing proxy class in {self.config.webserver.type}"
+            ) from e
+
+    @cached_property
+    def process_manager(self) -> Systemd:
+        return Systemd(host=self.host, config=self.config)
+
+    @cached_property
+    def hook_manager(self) -> HookManager:
+        return HookManager(host=self.host, config=self.config)

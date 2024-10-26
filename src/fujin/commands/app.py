@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-
 from typing import Annotated
 
 import cappa
 
-from fujin.commands.base import HostCommand
+from fujin.commands import AppCommand
 
 
 @cappa.command(help="Run application-related tasks")
-class App(HostCommand):
+class App(AppCommand):
 
     @cappa.command(help="Run an arbitrary command via the application binary")
     def exec(
@@ -29,14 +28,14 @@ class App(HostCommand):
                 self.stdout.output(result)
 
     def _service_run(self, action: str, name: str | None):
-        options = [*self.config.services, "all"]
+        options = [*self.process_manager.services_name, "all"]
         if name and name not in options:
             raise cappa.Exit(
                 f"{name} is not a valid service name, available options: {options}",
                 code=1,
             )
         if name == "all":
-            for name_ in self.config.services:
+            for name_ in self.process_manager.services_name:
                 self.host.sudo(f"systemctl {action} {name_}")
         else:
             self.host.sudo(f"systemctl {action} {name}")

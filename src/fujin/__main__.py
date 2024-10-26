@@ -6,6 +6,7 @@ import cappa
 from fujin.commands.app import App
 from fujin.commands.config import ConfigCMD
 from fujin.commands.deploy import Deploy
+from fujin.commands.down import Down
 from fujin.commands.redeploy import Redeploy
 from fujin.commands.server import Server
 from fujin.commands.up import Up
@@ -18,7 +19,9 @@ else:
 
 @cappa.command(help="Deployment of python web apps in a breeze :)")
 class Fujin:
-    subcommands: cappa.Subcommands[Up | Deploy | Redeploy | App | Server | ConfigCMD]
+    subcommands: cappa.Subcommands[
+        Up | Deploy | Redeploy | App | Server | ConfigCMD | Down
+    ]
 
 
 def main():
@@ -38,7 +41,7 @@ def _parse_aliases() -> list[str] | None:
     aliases = data.get("aliases")
     if not aliases:
         return
-    if len(sys.argv) < 1:
+    if len(sys.argv) == 1:
         return
     if sys.argv[1] not in aliases:
         return

@@ -4,11 +4,11 @@ from typing import Annotated
 
 import cappa
 
-from fujin.commands.base import HostCommand
+from fujin.commands import AppCommand
 
 
 @cappa.command(help="Manage server operations")
-class Server(HostCommand):
+class Server(AppCommand):
 
     @cappa.command(help="Display information about the host system")
     def info(self):
@@ -23,19 +23,21 @@ class Server(HostCommand):
         if not result.ok:
             self.host.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
             self.host.run_uv("tool update-shell")
-        self.config.webserver.get_proxy(host=self.host, config=self.config).install()
+        self.web_proxy.install()
         self.stdout.output("[green]Server bootstrap completed successfully![/green]")
 
-    @cappa.command(help="Execute an arbitrary command on the server, optionally in interactive mode")
+    @cappa.command(
+        help="Execute an arbitrary command on the server, optionally in interactive mode"
+    )
     def exec(
         self,
         command: str,
         interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         if interactive:
-            self.host.connection.run(command, pty=interactive)
+            self.host.run(command, pty=interactive)
         else:
-            result = self.host.connection.run(command, hide=True)
+            result = self.host.run(command, hide=True)
             self.stdout.output(result)
 
     @cappa.command(

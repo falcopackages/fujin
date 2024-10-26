@@ -1,9 +1,11 @@
 import msgspec
+
 from fujin.config import Config
 from fujin.host import Host
 
 CERTBOT_EMAIL = ""
 
+# TODO: this is a wip
 
 class WebProxy(msgspec.Struct):
     host: Host
@@ -15,7 +17,7 @@ class WebProxy(msgspec.Struct):
             "apt install -y nginx libpq-dev python3-dev python3-certbot-nginx sqlite3"
         )
 
-    def configure(self):
+    def setup(self):
         self.host.sudo(
             f"echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.config.app}",
             hide="out",
@@ -27,13 +29,16 @@ class WebProxy(msgspec.Struct):
             f"certbot --nginx -d {self.host.config.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
         )
         # Updating local Nginx configuration
-        self.host.connection.get(
+        self.host.get(
             f"/etc/nginx/sites-available/{self.config.app}",
             f".fujin/{self.config.app}",
         )
         # Enabling certificate auto-renewal
         self.host.sudo("systemctl enable certbot.timer")
         self.host.sudo("systemctl start certbot.timer")
+
+    def teardown(self):
+        pass
 
     def _get_config(self) -> str:
         return f"""

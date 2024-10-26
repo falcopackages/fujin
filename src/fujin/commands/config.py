@@ -10,7 +10,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from fujin.commands.base import BaseCommand
+from fujin.commands import BaseCommand
 from fujin.config import tomllib
 
 
@@ -92,10 +92,10 @@ class ConfigCMD(BaseCommand):
 
     @cappa.command(help="Generate a sample configuration file")
     def init(
-            self,
-            profile: Annotated[
-                str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
-            ] = "simple",
+        self,
+        profile: Annotated[
+            str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
+        ] = "simple",
     ):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
@@ -103,7 +103,9 @@ class ConfigCMD(BaseCommand):
         profile_to_func = {"simple": simple_config, "falco": falco_config}
         config = profile_to_func[profile]()
         fujin_toml.write_text(tomli_w.dumps(config))
-        self.stdout.output("[green]Sample configuration file generated successfully![/green]")
+        self.stdout.output(
+            "[green]Sample configuration file generated successfully![/green]"
+        )
 
     @cappa.command(help="Config documentation")
     def docs(self):
