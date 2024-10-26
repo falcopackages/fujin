@@ -12,7 +12,12 @@ class Server(AppCommand):
 
     @cappa.command(help="Display information about the host system")
     def info(self):
-        self.stdout.output(self.host.sudo("cat /etc/os-release", hide=True).stdout)
+        fastfetch = f"/home/{self.host.config.user}/.local/bin/fastfetch"
+        result = self.host.run(f"command -v {fastfetch}", warn=True, hide=True)
+        if result.ok:
+            self.host.run(fastfetch)
+        else:
+            self.stdout.output(self.host.sudo("cat /etc/os-release", hide=True).stdout)
 
     @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
@@ -23,6 +28,7 @@ class Server(AppCommand):
         if not result.ok:
             self.host.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
             self.host.run_uv("tool update-shell")
+        self.host.run_uv("tool install fastfetch-bin-edge")
         self.web_proxy.install()
         self.stdout.output("[green]Server bootstrap completed successfully![/green]")
 
@@ -30,9 +36,9 @@ class Server(AppCommand):
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
     def exec(
-        self,
-        command: str,
-        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+            self,
+            command: str,
+            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         if interactive:
             self.host.run(command, pty=interactive)
