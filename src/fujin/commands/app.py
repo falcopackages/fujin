@@ -27,19 +27,6 @@ class App(AppCommand):
                 )
                 self.stdout.output(result)
 
-    def _service_run(self, action: str, name: str | None):
-        options = [*self.process_manager.services_name, "all"]
-        if name and name not in options:
-            raise cappa.Exit(
-                f"{name} is not a valid service name, available options: {options}",
-                code=1,
-            )
-        if name == "all":
-            for name_ in self.process_manager.services_name:
-                self.host.sudo(f"systemctl {action} {name_}")
-        else:
-            self.host.sudo(f"systemctl {action} {name}")
-
     @cappa.command(
         help="Start the specified service or all services if no name is provided"
     )
@@ -49,7 +36,7 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self._service_run(action="start", name=name)
+        self.process_manager.start_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} started successfully![/green]")
 
@@ -62,7 +49,7 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self._service_run(action="restart", name=name)
+        self.process_manager.restart_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} restarted successfully![/green]")
 
@@ -75,7 +62,7 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self._service_run(action="stop", name=name)
+        self.process_manager.stop_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} stopped successfully![/green]")
 
@@ -84,4 +71,4 @@ class App(AppCommand):
         self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
     ):
         # TODO: flash out this more
-        self.host.sudo(f"journalctl -u {name} -r {'-f' if follow else ''}")
+        self.process_manager.service_logs(name=name, follow=follow)

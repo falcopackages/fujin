@@ -7,6 +7,7 @@ CERTBOT_EMAIL = ""
 
 # TODO: this is a wip
 
+
 class WebProxy(msgspec.Struct):
     host: Host
     config: Config

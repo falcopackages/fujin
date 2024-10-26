@@ -40,9 +40,7 @@ class Deploy(AppCommand):
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
         project_dir = self.host.project_dir(self.config.app)
-        self.host.put(
-            str(self.config.requirements), f"{project_dir}/requirements.txt"
-        )
+        self.host.put(str(self.config.requirements), f"{project_dir}/requirements.txt")
         self.host.put(str(self.host.config.envfile), f"{project_dir}/.env")
         self.host.put(
             str(self.config.distfile), f"{project_dir}/{self.config.distfile.name}"

@@ -79,23 +79,27 @@ class Systemd:
             if name != f"{self.config.app}.service":
                 self.host.sudo(f"systemctl disable {name}")
 
-    def start_services(self, *names: tuple[str]) -> None:
+    def start_services(self, *names) -> None:
         names = names or self.services_name
         for name in names:
             if name in self.services_name:
                 self.host.sudo(f"systemctl start {name}")
 
-    def restart_services(self, *names: tuple[str]) -> None:
+    def restart_services(self, *names) -> None:
         names = names or self.services_name
         for name in names:
             if name in self.services_name:
                 self.host.sudo(f"systemctl restart {name}")
 
-    def stop_services(self, *names: tuple[str]) -> None:
+    def stop_services(self, *names) -> None:
         names = names or self.services_name
         for name in names:
             if name in self.services_name:
                 self.host.sudo(f"systemctl stop {name}")
+
+    def service_logs(self, name: str, follow: bool = False):
+        # TODO: add more options here
+        self.host.sudo(f"journalctl -u {name} -r {'-f' if follow else ''}")
 
     def reload_configuration(self) -> None:
         self.host.sudo(f"systemctl daemon-reload")

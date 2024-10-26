@@ -5,7 +5,6 @@ from fujin.host import Host
 from fujin.config import Hook
 
 
-
 @dataclass(frozen=True, slots=True)
 class HookManager:
     config: Config
