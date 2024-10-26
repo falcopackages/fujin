@@ -1,6 +1,7 @@
 app = "bookstore"
 #version = "0.1.0" infer from the pyproject.toml file
 requirements = "requirements.txt"
+python_version = "3.13"
 build_command = "uv build"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"

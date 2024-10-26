@@ -45,7 +45,8 @@ class Deploy(AppCommand):
         self.host.put(
             str(self.config.distfile), f"{project_dir}/{self.config.distfile.name}"
         )
-        self.host.run(f"echo {self.config.python_version} > .python-version")
+        with self.host.cd_project_dir(self.config.app):
+            self.host.run(f"echo {self.config.python_version} > .python-version")
 
     def install_project(self):
         with self.host.cd_project_dir(self.config.app):

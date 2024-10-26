@@ -12,7 +12,7 @@ class Server(AppCommand):
 
     @cappa.command(help="Display information about the host system")
     def info(self):
-        self.stdout.output(self.host.sudo("cat /etc/os-release", hide="out"))
+        self.stdout.output(self.host.sudo("cat /etc/os-release", hide=True).stdout)
 
     @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
@@ -37,8 +37,7 @@ class Server(AppCommand):
         if interactive:
             self.host.run(command, pty=interactive)
         else:
-            result = self.host.run(command, hide=True)
-            self.stdout.output(result)
+            self.stdout.output(self.host.run(command, hide=True).stdout)
 
     @cappa.command(
         name="create-user", help="Create a new user with sudo and ssh access"

@@ -59,10 +59,10 @@ class Host:
             raise cappa.Exit(msg, code=1) from e
 
     def put(self, *args, **kwargs):
-        return self.connection.put(args, **kwargs, watchers=self.watchers)
+        return self.connection.put(*args, **kwargs)
 
     def get(self, *args, **kwargs):
-        return self.connection.get(args, **kwargs, watchers=self.watchers)
+        return self.connection.get(*args, **kwargs)
 
     def sudo(self, args: str, **kwargs):
         return self.connection.sudo(args, **kwargs)

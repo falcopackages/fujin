@@ -12,25 +12,24 @@ class App(AppCommand):
 
     @cappa.command(help="Run an arbitrary command via the application binary")
     def exec(
-        self,
-        command: str,
-        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+            self,
+            command: str,
+            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         with self.host.cd_project_dir(self.config.app):
             if interactive:
                 self.host.run(f"source .env && {self.config.app_bin} {command}", pty=interactive)
             else:
-                result = self.host.run(f"source .env && {self.config.app_bin} {command}", hide=True)
-                self.stdout.output(result)
+                self.stdout.output(self.host.run(f"source .env && {self.config.app_bin} {command}", hide=True).stdout)
 
     @cappa.command(
         help="Start the specified service or all services if no name is provided"
     )
     def start(
-        self,
-        name: Annotated[
-            str | None, cappa.Arg(help="Service name, no value means all")
-        ] = None,
+            self,
+            name: Annotated[
+                str | None, cappa.Arg(help="Service name, no value means all")
+            ] = None,
     ):
         self.process_manager.start_services(name)
         msg = f"{name} Service" if name else "All Services"
@@ -40,10 +39,10 @@ class App(AppCommand):
         help="Restart the specified service or all services if no name is provided"
     )
     def restart(
-        self,
-        name: Annotated[
-            str | None, cappa.Arg(help="Service name, no value means all")
-        ] = None,
+            self,
+            name: Annotated[
+                str | None, cappa.Arg(help="Service name, no value means all")
+            ] = None,
     ):
         self.process_manager.restart_services(name)
         msg = f"{name} Service" if name else "All Services"
@@ -53,10 +52,10 @@ class App(AppCommand):
         help="Stop the specified service or all services if no name is provided"
     )
     def stop(
-        self,
-        name: Annotated[
-            str | None, cappa.Arg(help="Service name, no value means all")
-        ] = None,
+            self,
+            name: Annotated[
+                str | None, cappa.Arg(help="Service name, no value means all")
+            ] = None,
     ):
         self.process_manager.stop_services(name)
         msg = f"{name} Service" if name else "All Services"
@@ -64,7 +63,7 @@ class App(AppCommand):
 
     @cappa.command(help="Show logs for the specified service")
     def logs(
-        self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
+            self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
     ):
         # TODO: flash out this more
         self.process_manager.service_logs(name=name, follow=follow)
