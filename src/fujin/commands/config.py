@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import cappa
+import tomli_w
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
 from fujin.commands.base import BaseCommand
-import tomli_w
 from fujin.config import tomllib
+
 
 @cappa.command(name="config", help="Config management")
 class ConfigCMD(BaseCommand):
@@ -89,36 +91,19 @@ class ConfigCMD(BaseCommand):
         console.print(aliases_table)
 
     @cappa.command(help="Generate a sample configuration file")
-    def init(self):
+    def init(
+        self,
+        profile: Annotated[
+            str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
+        ] = "simple",
+    ):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
-        # fujin_toml.touch()
-        config = {}
-        pyproject_toml = Path("pyproject.toml")
-        guessed_app = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
-        if pyproject_toml.exists():
-            pyproject = tomllib.loads(pyproject_toml.read_text())
-            app = pyproject.get("project", {}).get("name")
-            if not app:
-                config["app"] = guessed_app
-            if not pyproject.get("project", {}).get("version"):
-                config["version"] = "0.1.0"
-        else:
-            config['app'] = guessed_app
-            config["version"] = "0.1.0"
-        config["build_command"] = "uv build"
-        config["distfile"] = f"dist/{guessed_app}" + "-{version}-py3-none-any.whl"
-        if not Path(".python-version").exists():
-            config["python_version"] = "3.12"
-        config["webserver"] = {"upstream": "localhost:8000", "type": "fujin.proxies.caddy"}
-        config["hooks"] = {"pre_deploy": f".venv/bin/{guessed_app} migrate"}
-        config["processes"] = {"web": f".venv/bin/gunicorn {guessed_app}.wsgi:app --bind 0.0.0.0:8000"}
-        config["aliases"] = {"shell": "server exec -i bash"}
-        config["hosts"] = {"primary": {"ip": "127.0.0.1", "user": "root", "domain_name": f"{guessed_app}.com", "envfile": ".env.prod", "default": True}}
+        profile_to_func = {"simple": simple_config, "falco": falco_config}
+        config = profile_to_func[profile]()
         fujin_toml.write_text(tomli_w.dumps(config))
-        self.stdout.output("[green]Sample configuration file generated[/green]")
-
+        self.stdout.output("[green]Configuration file generated[/green]")
 
     @cappa.command(help="Config documentation")
     def docs(self):
@@ -163,3 +148,60 @@ docs = """
   - `key_filename` (Optional) = `"./id_rsa"`
   - `ssh_port` (Optional) = `2222`
 """
+
+
+def simple_config() -> dict:
+    app = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+
+    config = {
+        "app": app,
+        "version": "0.1.0",
+        "build_command": "uv build",
+        "distfile": f"dist/{app}-{{version}}-py3-none-any.whl",
+        "webserver": {
+            "upstream": "localhost:8000",
+            "type": "fujin.proxies.caddy",
+        },
+        "hooks": {"pre_deploy": f".venv/bin/{app} migrate"},
+        "processes": {"web": f".venv/bin/gunicorn {app}.wsgi:app --bind 0.0.0.0:8000"},
+        "aliases": {"shell": "server exec -i bash"},
+        "hosts": {
+            "primary": {
+                "ip": "127.0.0.1",
+                "user": "root",
+                "domain_name": f"{app}.com",
+                "envfile": ".env.prod",
+                "default": True,
+            }
+        },
+    }
+    if not Path(".python-version").exists():
+        config["python_version"] = "3.12"
+    pyproject_toml = Path("pyproject.toml")
+    if pyproject_toml.exists():
+        pyproject = tomllib.loads(pyproject_toml.read_text())
+        config["app"] = pyproject.get("project", {}).get("name", app)
+        if pyproject.get("project", {}).get("version"):
+            # fujin will read the version itself from the pyproject
+            config.pop("version")
+    return config
+
+
+def falco_config() -> dict:
+    config = simple_config()
+    config.update(
+        {
+            "hooks": {"pre_deploy": f".venv/bin/{config['app']} setup"},
+            "processes": {
+                "web": f".venv/bin/{config['app']} prodserver",
+                "worker": f".venv/bin/{config['app']} qcluster",
+            },
+            "aliases": {
+                "console": "app exec -i shell_plus",
+                "dbconsole": "app exec -i dbshell",
+                "print_settings": "app exec print_settings --format=pprint",
+                "shell": "server exec -i bash",
+            },
+        }
+    )
+    return config

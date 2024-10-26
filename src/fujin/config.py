@@ -33,14 +33,6 @@ class Hook(StrEnum):
     PRE_DEPLOY = "pre_deploy"
 
 
-def read_project_name_from_pyproject():
-    try:
-        return tomllib.loads(Path("pyproject.toml").read_text())["project"]["name"]
-    except (FileNotFoundError, KeyError) as e:
-        raise msgspec.ValidationError(
-            "App was not found in the pyproject.toml file, define it manually"
-        )
-
 
 def read_version_from_pyproject():
     try:
@@ -61,7 +53,7 @@ def find_python_version():
 
 
 class Config(msgspec.Struct, kw_only=True):
-    app: str = msgspec.field(default_factory=read_project_name_from_pyproject)
+    app: str
     app_bin: str = ".venv/bin/{app}"
     version: str = msgspec.field(default_factory=read_version_from_pyproject)
     python_version: str = msgspec.field(default_factory=find_python_version)
