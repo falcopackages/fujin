@@ -7,6 +7,7 @@ from functools import cached_property
 import cappa
 from fabric import Connection
 from invoke import Responder
+from invoke.exceptions import UnexpectedExit
 from paramiko.ssh_exception import AuthenticationException
 
 from .config import HostConfig
@@ -57,6 +58,8 @@ class Host:
             else:
                 msg += "No password or SSH key was provided. Ensure your current host has SSH access to the target host."
             raise cappa.Exit(msg, code=1) from e
+        except UnexpectedExit as e:
+            raise cappa.Exit(str(e), code=1) from e
 
     def put(self, *args, **kwargs):
         return self.connection.put(*args, **kwargs)

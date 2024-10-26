@@ -33,8 +33,6 @@ class AppCommand(BaseCommand):
 
     _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
 
-    # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped
-
     @cached_property
     def host(self) -> Host:
         if not self._host:

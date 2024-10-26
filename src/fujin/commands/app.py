@@ -10,6 +10,22 @@ from fujin.commands import AppCommand
 @cappa.command(help="Run application-related tasks")
 class App(AppCommand):
 
+    @cappa.command(help="Display information about the application")
+    def info(self):
+        # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped
+        infos = {
+            "app": self.config.app,
+            "app_bin": self.config.app_bin,
+            "version": self.config.version,
+            "python_version": self.config.python_version,
+            "services": ", ".join(s for s in self.process_manager.service_names)
+        }
+        formatted_text = "\n".join(
+            f"[bold green]{key}:[/bold green] {value}"
+            for key, value in infos.items()
+        )
+        self.stdout.output(formatted_text)
+
     @cappa.command(help="Run an arbitrary command via the application binary")
     def exec(
             self,
