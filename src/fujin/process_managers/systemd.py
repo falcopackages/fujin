@@ -4,8 +4,8 @@ import importlib.util
 from dataclasses import dataclass
 from pathlib import Path
 
-from .config import Config
-from .host import Host
+from fujin.config import Config
+from fujin.host import Host
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,12 +15,12 @@ class SystemdFile:
 
 
 @dataclass(frozen=True, slots=True)
-class Systemd:
+class ProcessManager:
     config: Config
     host: Host
 
     @property
-    def services_name(self) -> list[str]:
+    def service_names(self) -> list[str]:
         return [self.get_service_name(name) for name in self.config.processes]
 
     def get_service_name(self, name: str):
@@ -37,14 +37,14 @@ class Systemd:
             )
 
         self.host.sudo(f"systemctl enable --now {self.config.app}.socket")
-        for name in self.services_name:
+        for name in self.service_names:
             # the main web service is launched by the socket service
             if name != f"{self.config.app}.service":
                 self.host.sudo(f"systemctl enable {name}")
 
     def get_configuration_files(self) -> list[SystemdFile]:
         templates_folder = (
-            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()
@@ -74,27 +74,27 @@ class Systemd:
     def uninstall_services(self) -> None:
         self.stop_services()
         self.host.sudo(f"systemctl disable {self.config.app}.socket")
-        for name in self.services_name:
+        for name in self.service_names:
             # was never enabled in the first place, look at the code above
             if name != f"{self.config.app}.service":
                 self.host.sudo(f"systemctl disable {name}")
 
     def start_services(self, *names) -> None:
-        names = names or self.services_name
+        names = names or self.service_names
         for name in names:
-            if name in self.services_name:
+            if name in self.service_names:
                 self.host.sudo(f"systemctl start {name}")
 
     def restart_services(self, *names) -> None:
-        names = names or self.services_name
+        names = names or self.service_names
         for name in names:
-            if name in self.services_name:
+            if name in self.service_names:
                 self.host.sudo(f"systemctl restart {name}")
 
     def stop_services(self, *names) -> None:
-        names = names or self.services_name
+        names = names or self.service_names
         for name in names:
-            if name in self.services_name:
+            if name in self.service_names:
                 self.host.sudo(f"systemctl stop {name}")
 
     def service_logs(self, name: str, follow: bool = False):

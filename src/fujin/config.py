@@ -36,6 +36,7 @@ class Config(msgspec.Struct, kw_only=True):
     aliases: dict[str, str]
     hosts: dict[str, HostConfig]
     processes: dict[str, str]
+    process_manager: str = "fujin.process_managers.systemd"
     webserver: Webserver
     _requirements: str = msgspec.field(name="requirements", default="requirements.txt")
     hooks: dict[Hook, str] = msgspec.field(default=dict)

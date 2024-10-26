@@ -9,8 +9,8 @@ from fujin.config import Config
 from fujin.errors import ImproperlyConfiguredError
 from fujin.hooks import HookManager
 from fujin.host import Host
+from fujin.process_managers import ProcessManager
 from fujin.proxies import WebProxy
-from fujin.systemd import Systemd
 
 
 @dataclass
@@ -32,6 +32,8 @@ class AppCommand(BaseCommand):
     """
 
     _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
+
+    # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped
 
     @cached_property
     def host(self) -> Host:
@@ -63,12 +65,18 @@ class AppCommand(BaseCommand):
             return getattr(module, "WebProxy")(host=self.host, config=self.config)
         except KeyError as e:
             raise ImproperlyConfiguredError(
-                f"Missing proxy class in {self.config.webserver.type}"
+                f"Missing WebProxy class in {self.config.webserver.type}"
             ) from e
 
     @cached_property
-    def process_manager(self) -> Systemd:
-        return Systemd(host=self.host, config=self.config)
+    def process_manager(self) -> ProcessManager:
+        module = importlib.import_module(self.config.process_manager)
+        try:
+            return getattr(module, "ProcessManager")(host=self.host, config=self.config)
+        except KeyError as e:
+            raise ImproperlyConfiguredError(
+                f"Missing ProcessManager class in {self.config.process_manager}"
+            ) from e
 
     @cached_property
     def hook_manager(self) -> HookManager:
