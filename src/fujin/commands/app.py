@@ -29,18 +29,49 @@ class App(HostCommand):
                 )
                 self.stdout.output(result)
 
-    @cappa.command(help="Logs")
-    def start(self):
-        pass
+    def _service_run(self, action: str, name: str | None):
+        options = [*self.config.services, "all"]
+        if name and name not in options:
+            raise cappa.Exit(
+                f"{name} is not a valid service name, available options: {options}",
+                code=1,
+            )
+        if name == "all":
+            for name_ in self.config.services:
+                self.host.sudo(f"systemctl {action} {name_}")
+        else:
+            self.host.sudo(f"systemctl {action} {name}")
 
     @cappa.command(help="Logs")
-    def restart(self):
-        pass
+    def start(
+        self,
+        name: Annotated[
+            str | None, cappa.Arg(help="Service name, no value means all")
+        ] = None,
+    ):
+        self._service_run(action="start", name=name)
 
     @cappa.command(help="Logs")
-    def stop(self):
-        pass
+    def restart(
+        self,
+        name: Annotated[
+            str | None, cappa.Arg(help="Service name, no value means all")
+        ] = None,
+    ):
+        self._service_run(action="restart", name=name)
 
     @cappa.command(help="Logs")
-    def logs(self):
-        pass
+    def stop(
+        self,
+        name: Annotated[
+            str | None, cappa.Arg(help="Service name, no value means all")
+        ] = None,
+    ):
+        self._service_run(action="stop", name=name)
+
+    @cappa.command(help="Logs")
+    def logs(
+        self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
+    ):
+        # TODO: flash out this more
+        self.host.sudo(f"journalctl -u {name} -r {'-f' if follow else ''}")
