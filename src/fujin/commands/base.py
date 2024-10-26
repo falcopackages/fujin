@@ -26,7 +26,6 @@ class HostCommand(BaseCommand):
 
     @cached_property
     def host(self) -> Host:
-        host_config = None
         if not self._host:
             host_config = next(
                 (hc for hc in self.config.hosts.values() if hc.default), None
@@ -42,7 +41,7 @@ class HostCommand(BaseCommand):
                     for name, hc in self.config.hosts.items()
                     if self._host in [name, hc.ip]
                 ),
-                None,
+                None
             )
         if not host_config:
             raise cappa.Exit(f"Host {self._host} does not exist", code=1)

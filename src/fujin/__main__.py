@@ -16,7 +16,7 @@ else:
     import tomli as tomllib
 
 
-@cappa.command(help="Deployment of python web apps in a breeze")
+@cappa.command(help="Deployment of python web apps in a breeze :)")
 class Fujin:
     subcommands: cappa.Subcommands[Up | Deploy | Redeploy | App | Server | ConfigCMD]
 

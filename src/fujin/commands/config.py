@@ -14,10 +14,10 @@ from fujin.commands.base import BaseCommand
 from fujin.config import tomllib
 
 
-@cappa.command(name="config", help="Config management")
+@cappa.command(name="config", help="Manage application configuration")
 class ConfigCMD(BaseCommand):
 
-    @cappa.command(help="Show parsed configuration")
+    @cappa.command(help="Display the parsed configuration")
     def show(self):
         console = Console()
 
@@ -92,10 +92,10 @@ class ConfigCMD(BaseCommand):
 
     @cappa.command(help="Generate a sample configuration file")
     def init(
-        self,
-        profile: Annotated[
-            str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
-        ] = "simple",
+            self,
+            profile: Annotated[
+                str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
+            ] = "simple",
     ):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
@@ -103,51 +103,11 @@ class ConfigCMD(BaseCommand):
         profile_to_func = {"simple": simple_config, "falco": falco_config}
         config = profile_to_func[profile]()
         fujin_toml.write_text(tomli_w.dumps(config))
-        self.stdout.output("[green]Configuration file generated[/green]")
+        self.stdout.output("[green]Sample configuration file generated successfully![/green]")
 
     @cappa.command(help="Config documentation")
     def docs(self):
         self.stdout.output(Markdown(docs))
-
-
-docs = """
-# Fujin Configuration - Quick Reference
-
-## Global Options
-
-- `app` - Name of the project (e.g., "bookstore").
-- `version` - Project version (e.g., "0.1.0").
-- `requirements` - Path to the requirements file (e.g., "requirements.txt").
-- `build_command` - Command to build the project (e.g., "uv build").
-- `release_command` - Post-deployment command (e.g., migrations).
-- `distfile` - Path to the distribution file (e.g., "dist/bookstore-{version}.whl").
-- `envfile` - Path to the environment file (e.g., ".env.prod").
-
-## Aliases
-
-- Define shortcuts for commands:
-  - `console` = `!bookstore shell_plus`
-  - `migrate` = `!bookstore migrate`
-  - `shell_plus` = `!bookstore shell_plus`
-
-## Processes
-
-- Web process example:
-  - `port = 8000`
-  - `command = !bookstore prodserver`
-- Worker process example:
-  - `command = !bookstore qcluster`
-
-## Hosts
-
-- Host configuration example:
-  - `ip = "127.0.0.1"`
-  - `domain_name = "mybookstore.com"`
-  - `user = "test"`
-  - `password_env` (Optional) = `"TEST_PASSWORD"`
-  - `key_filename` (Optional) = `"./id_rsa"`
-  - `ssh_port` (Optional) = `2222`
-"""
 
 
 def simple_config() -> dict:
@@ -205,3 +165,8 @@ def falco_config() -> dict:
         }
     )
     return config
+
+
+docs = """
+# Fujin Configuration
+"""

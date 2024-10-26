@@ -7,14 +7,14 @@ import cappa
 from fujin.commands.base import HostCommand
 
 
-@cappa.command(help="Server management")
+@cappa.command(help="Manage server operations")
 class Server(HostCommand):
 
-    @cappa.command(help="Show host info")
+    @cappa.command(help="Display information about the host system")
     def info(self):
         self.stdout.output(self.host.sudo("cat /etc/os-release", hide="out"))
 
-    @cappa.command(help="Setup uv, caddy and install some dependencies")
+    @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
         self.host.sudo("apt update")
         self.host.sudo("apt upgrade -y")
@@ -24,9 +24,9 @@ class Server(HostCommand):
             self.host.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
             self.host.run_uv("tool update-shell")
         self.config.webserver.get_proxy(host=self.host, config=self.config).install()
-        self.stdout.output("[green]Server bootstrap Done![/green]")
+        self.stdout.output("[green]Server bootstrap completed successfully![/green]")
 
-    @cappa.command(help="Run arbitrary command on the server")
+    @cappa.command(help="Execute an arbitrary command on the server, optionally in interactive mode")
     def exec(
         self,
         command: str,
@@ -52,4 +52,4 @@ class Server(HostCommand):
         self.host.sudo(
             f"echo '{name} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers"
         )
-        self.stdout.output(f"[green]New user {name} created[/green]")
+        self.stdout.output(f"[green]New user {name} created successfully![/green]")

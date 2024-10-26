@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+
 from typing import Annotated
 
 import cappa
@@ -8,11 +8,10 @@ import cappa
 from fujin.commands.base import HostCommand
 
 
-@cappa.command(help="Run app related tasks")
-@dataclass
+@cappa.command(help="Run application-related tasks")
 class App(HostCommand):
 
-    @cappa.command(help="Run arbitrary command via the app binary")
+    @cappa.command(help="Run an arbitrary command via the application binary")
     def exec(
         self,
         command: str,
@@ -42,7 +41,9 @@ class App(HostCommand):
         else:
             self.host.sudo(f"systemctl {action} {name}")
 
-    @cappa.command(help="Logs")
+    @cappa.command(
+        help="Start the specified service or all services if no name is provided"
+    )
     def start(
         self,
         name: Annotated[
@@ -50,8 +51,12 @@ class App(HostCommand):
         ] = None,
     ):
         self._service_run(action="start", name=name)
+        msg = f"{name} Service" if name else "All Services"
+        self.stdout.output(f"[green]{msg} started successfully![/green]")
 
-    @cappa.command(help="Logs")
+    @cappa.command(
+        help="Restart the specified service or all services if no name is provided"
+    )
     def restart(
         self,
         name: Annotated[
@@ -59,8 +64,12 @@ class App(HostCommand):
         ] = None,
     ):
         self._service_run(action="restart", name=name)
+        msg = f"{name} Service" if name else "All Services"
+        self.stdout.output(f"[green]{msg} restarted successfully![/green]")
 
-    @cappa.command(help="Logs")
+    @cappa.command(
+        help="Stop the specified service or all services if no name is provided"
+    )
     def stop(
         self,
         name: Annotated[
@@ -68,8 +77,10 @@ class App(HostCommand):
         ] = None,
     ):
         self._service_run(action="stop", name=name)
+        msg = f"{name} Service" if name else "All Services"
+        self.stdout.output(f"[green]{msg} stopped successfully![/green]")
 
-    @cappa.command(help="Logs")
+    @cappa.command(help="Show logs for the specified service")
     def logs(
         self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
     ):

@@ -11,7 +11,7 @@ from fujin.commands.base import HostCommand
 from fujin.config import Hook
 
 
-@cappa.command(help="Deploy project")
+@cappa.command(help="Deploy the project by building, transferring files, installing, and configuring services")
 class Deploy(HostCommand):
 
     def __call__(self):
@@ -38,7 +38,8 @@ class Deploy(HostCommand):
         self.restart_services()
 
         self.config.webserver.get_proxy(host=self.host, config=self.config).configure()
-        self.stdout.output("[green]Deployment completed![/green]")
+        self.stdout.output("[green]Project deployment completed successfully![/green]")
+        self.stdout.output(f"[blue]Access the deployed project at: https://{self.host.config.domain_name}[/blue]")
 
     def transfer_files(self):
         if not self.host.config.envfile.exists():

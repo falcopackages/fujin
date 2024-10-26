@@ -3,7 +3,7 @@ import cappa
 from fujin.commands.base import HostCommand
 
 
-@cappa.command(help="Remove app configuration, files and stop app services")
+@cappa.command(help="Remove application configuration, files, and stop application services")
 class Down(HostCommand):
     """
     ask double confirmation
