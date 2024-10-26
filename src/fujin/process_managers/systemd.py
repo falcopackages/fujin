@@ -44,7 +44,7 @@ class ProcessManager:
 
     def get_configuration_files(self) -> list[SystemdFile]:
         templates_folder = (
-                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()
