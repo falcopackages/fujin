@@ -2,8 +2,9 @@ import msgspec
 
 from fujin.config import Config
 from fujin.host import Host
+import os
 
-CERTBOT_EMAIL = ""
+CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
 
 # TODO: this is a wip
 
@@ -19,6 +20,7 @@ class WebProxy(msgspec.Struct):
         )
 
     def setup(self):
+        # TODO should not be running all this everytime
         self.host.sudo(
             f"echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.config.app}",
             hide="out",
@@ -26,6 +28,7 @@ class WebProxy(msgspec.Struct):
         self.host.sudo(
             f"ln -sf /etc/nginx/sites-available/{self.config.app} /etc/nginx/sites-enabled/{self.config.app}"
         )
+        self.host.sudo("systemctl restart nginx")
         self.host.sudo(
             f"certbot --nginx -d {self.host.config.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
         )

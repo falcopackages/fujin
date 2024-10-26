@@ -70,9 +70,6 @@ class Host:
     def run_uv(self, args: str, **kwargs):
         return self.run(f"/home/{self.config.user}/.cargo/bin/uv {args}", **kwargs)
 
-    def run_caddy(self, args: str, **kwargs):
-        return self.run(f"/home/{self.config.user}/.local/bin/caddy {args}", **kwargs)
-
     def make_project_dir(self, project_name: str):
         self.run(f"mkdir -p {self.project_dir(project_name)}")
 
