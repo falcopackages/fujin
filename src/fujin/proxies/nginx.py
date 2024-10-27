@@ -1,10 +1,12 @@
+import os
+
 import msgspec
 
 from fujin.config import Config
 from fujin.host import Host
-import os
 
 CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
+
 
 # TODO: this is a wip
 
@@ -15,9 +17,13 @@ class WebProxy(msgspec.Struct):
 
     def install(self):
         # TODO: won"t always install the latest version, install certbot with uv ?
+        # https://certbot.eff.org/instructions?ws=nginx&os=pip
         self.host.sudo(
-            "apt install -y nginx libpq-dev python3-dev python3-certbot-nginx sqlite3"
+            "apt install -y nginx libpq-dev python3-dev python3-certbot-nginx"
         )
+
+    def uninstall(self):
+        pass
 
     def setup(self):
         # TODO should not be running all this everytime

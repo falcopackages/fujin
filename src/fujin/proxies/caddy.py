@@ -14,6 +14,10 @@ class WebProxy(msgspec.Struct):
         self.host.run_uv("tool install caddy-bin")
         self.host.run(f"/home/{self.host.config.user}/.local/bin/caddy start", pty=True)
 
+    def uninstall(self):
+        self.host.run_uv(f"/home/{self.host.config.user}/.local/bin/caddy stop")
+        self.host.run_uv("tool uninstall caddy")
+
     def setup(self):
         with self.host.cd_project_dir(self.config.app):
             self.host.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")

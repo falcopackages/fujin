@@ -32,13 +32,17 @@ class Server(AppCommand):
         self.web_proxy.install()
         self.stdout.output("[green]Server bootstrap completed successfully![/green]")
 
+    @cappa.command(help="Stop and uninstall the web proxy")
+    def uninstall_proxy(self):
+        self.web_proxy.uninstall()
+
     @cappa.command(
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
     def exec(
-            self,
-            command: str,
-            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+        self,
+        command: str,
+        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         if interactive:
             self.host.run(command, pty=interactive)

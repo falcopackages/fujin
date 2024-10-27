@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from fujin.config import Config
-from fujin.config import Hook
+from fujin.config import Config, Hook
 from fujin.host import Host
 
 

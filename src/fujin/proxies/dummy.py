@@ -9,6 +9,9 @@ class WebProxy:
     def install(self):
         pass
 
+    def uninstall(self):
+        pass
+
     def setup(self):
         pass
 

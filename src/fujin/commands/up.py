@@ -1,6 +1,7 @@
 import cappa
 
 from fujin.commands import AppCommand
+
 from .deploy import Deploy
 from .server import Server
 
