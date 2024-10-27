@@ -9,8 +9,10 @@ from fabric import Connection
 from invoke import Responder
 from invoke.exceptions import UnexpectedExit
 from paramiko.ssh_exception import AuthenticationException
+from typing import TYPE_CHECKING
 
-from .config import HostConfig
+if TYPE_CHECKING:
+    from .config import HostConfig
 
 
 @dataclass(frozen=True)

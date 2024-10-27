@@ -17,4 +17,5 @@ class Redeploy(AppCommand):
         deploy.install_project()
         deploy.release()
         self.process_manager.restart_services()
+        self.hook_manager.post_deploy()
         self.stdout.output("[green]Redeployment completed successfully![/green]")

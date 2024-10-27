@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import sys
-from imaplib import Flags
 from pathlib import Path
 
 import msgspec
@@ -14,17 +13,7 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-try:
-    from enum import StrEnum
-except ImportError:
-    from enum import Enum
-
-    class StrEnum(str, Enum):
-        pass
-
-
-class Hook(StrEnum):
-    PRE_DEPLOY = "pre_deploy"
+from .hooks import HooksDict
 
 
 class Config(msgspec.Struct, kw_only=True):
@@ -36,13 +25,13 @@ class Config(msgspec.Struct, kw_only=True):
     release_command: str | None = None
     skip_project_install: bool = False
     _distfile: str = msgspec.field(name="distfile")
-    aliases: dict[str, str]
+    aliases: dict[str, str] = msgspec.field(default=dict)
     hosts: dict[str, HostConfig]
-    processes: dict[str, str]
+    processes: dict[str, str] = msgspec.field(default=dict)
     process_manager: str = "fujin.process_managers.systemd"
     webserver: Webserver
     _requirements: str = msgspec.field(name="requirements", default="requirements.txt")
-    hooks: dict[Hook, str] = msgspec.field(default=dict)
+    hooks: HooksDict = msgspec.field(default=dict)
 
     def __post_init__(self):
         self.app_bin = self.app_bin.format(app=self.app)

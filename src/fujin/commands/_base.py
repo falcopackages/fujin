@@ -78,4 +78,4 @@ class AppCommand(BaseCommand):
 
     @cached_property
     def hook_manager(self) -> HookManager:
-        return HookManager(host=self.host, config=self.config)
+        return HookManager(host=self.host, hooks=self.config.hooks, app=self.config.app)

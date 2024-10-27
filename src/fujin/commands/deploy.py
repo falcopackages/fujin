@@ -24,11 +24,12 @@ class Deploy(AppCommand):
         self.install_project()
         self.release()
 
-        self.process_manager.install_services()
-        self.process_manager.reload_configuration()
-        self.process_manager.restart_services()
+        # self.process_manager.install_services()
+        # self.process_manager.reload_configuration()
+        # self.process_manager.restart_services()
 
         self.web_proxy.setup()
+        self.hook_manager.post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.host.config.domain_name}[/blue]"
@@ -58,5 +59,6 @@ class Deploy(AppCommand):
             self.host.run_uv(f"pip install {self.config.distfile.name}")
 
     def release(self):
-        if self.config.release_command:
-            self.host.run(f"source .env && {self.config.release_command}")
+        with self.host.cd_project_dir(self.config.app):
+            if self.config.release_command:
+                self.host.run(f"source .env && {self.config.release_command}")

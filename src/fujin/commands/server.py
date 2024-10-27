@@ -21,6 +21,7 @@ class Server(AppCommand):
 
     @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
+        self.hook_manager.pre_bootstrap()
         self.host.sudo("apt update")
         self.host.sudo("apt upgrade -y")
         self.host.sudo("apt install -y sqlite3 curl")
@@ -30,6 +31,7 @@ class Server(AppCommand):
             self.host.run_uv("tool update-shell")
         self.host.run_uv("tool install fastfetch-bin-edge")
         self.web_proxy.install()
+        self.hook_manager.post_bootstrap()
         self.stdout.output("[green]Server bootstrap completed successfully![/green]")
 
     @cappa.command(help="Stop and uninstall the web proxy")

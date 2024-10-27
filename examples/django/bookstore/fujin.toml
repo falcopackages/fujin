@@ -7,6 +7,10 @@ release_command = ".venv/bin/bookstore migrate"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
 
+[hooks.post_deploy]
+pip_list = "uv pip list"
+migrate = ".venv/bin/bookstore migrate" # useless just so show the example
+
 [aliases]
 console = "app exec -i shell"
 dbshell = "app exec -i dbshell"
