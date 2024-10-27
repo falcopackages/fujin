@@ -11,9 +11,10 @@ from .deploy import Deploy
 class Redeploy(AppCommand):
 
     def __call__(self):
+        self.hook_manager.pre_deploy()
         deploy = Deploy(_host=self._host)
         deploy.transfer_files()
         deploy.install_project()
-        self.hook_manager.pre_deploy()
+        deploy.release()
         self.process_manager.restart_services()
         self.stdout.output("[green]Redeployment completed successfully![/green]")

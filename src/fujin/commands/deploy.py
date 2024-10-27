@@ -22,6 +22,7 @@ class Deploy(AppCommand):
         self.host.make_project_dir(project_name=self.config.app)
         self.transfer_files()
         self.install_project()
+        self.release()
 
         self.process_manager.install_services()
         self.process_manager.reload_configuration()
@@ -49,9 +50,13 @@ class Deploy(AppCommand):
             self.host.run(f"echo {self.config.python_version} > .python-version")
 
     def install_project(self):
+        if self.config.skip_project_install:
+            return
         with self.host.cd_project_dir(self.config.app):
             self.host.run_uv("venv")
             self.host.run_uv("pip install -r requirements.txt")
             self.host.run_uv(f"pip install {self.config.distfile.name}")
-            if self.config.release_command:
-                self.host.run(f"source .env && {self.config.release_command}")
+
+    def release(self):
+        if self.config.release_command:
+            self.host.run(f"source .env && {self.config.release_command}")

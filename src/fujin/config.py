@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from imaplib import Flags
 from pathlib import Path
 
 import msgspec
@@ -33,6 +34,7 @@ class Config(msgspec.Struct, kw_only=True):
     python_version: str = msgspec.field(default_factory=lambda: find_python_version())
     build_command: str
     release_command: str | None = None
+    skip_project_install: bool = False
     _distfile: str = msgspec.field(name="distfile")
     aliases: dict[str, str]
     hosts: dict[str, HostConfig]
