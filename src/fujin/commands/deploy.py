@@ -13,6 +13,7 @@ from fujin.commands import AppCommand
 class Deploy(AppCommand):
 
     def __call__(self):
+        self.hook_manager.pre_deploy()
         try:
             subprocess.run(self.config.build_command.split(), check=True)
         except subprocess.CalledProcessError as e:
@@ -21,7 +22,6 @@ class Deploy(AppCommand):
         self.host.make_project_dir(project_name=self.config.app)
         self.transfer_files()
         self.install_project()
-        self.hook_manager.pre_deploy()
 
         self.process_manager.install_services()
         self.process_manager.reload_configuration()
@@ -53,3 +53,5 @@ class Deploy(AppCommand):
             self.host.run_uv("venv")
             self.host.run_uv("pip install -r requirements.txt")
             self.host.run_uv(f"pip install {self.config.distfile.name}")
+            if self.config.release_command:
+                self.host.run(f"source .env && {self.config.release_command}")

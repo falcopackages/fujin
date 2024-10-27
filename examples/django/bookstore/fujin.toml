@@ -3,11 +3,9 @@ app = "bookstore"
 requirements = "requirements.txt"
 python_version = "3.13"
 build_command = "uv build"
+release_command = ".venv/bin/bookstore migrate"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
-
-[hooks]
-pre_deploy = ".venv/bin/bookstore migrate"
 
 [aliases]
 console = "app exec -i shell"

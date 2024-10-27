@@ -32,6 +32,7 @@ class Config(msgspec.Struct, kw_only=True):
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
     python_version: str = msgspec.field(default_factory=lambda: find_python_version())
     build_command: str
+    release_command: str | None = None
     _distfile: str = msgspec.field(name="distfile")
     aliases: dict[str, str]
     hosts: dict[str, HostConfig]
