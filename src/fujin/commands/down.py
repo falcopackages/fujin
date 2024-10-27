@@ -23,8 +23,7 @@ class Down(AppCommand):
         if confirm == "no":
             return
         self.hook_manager.pre_teardown()
-        project_dir = self.host.project_dir(self.config.app)
-        self.host.run(f"rm -rf {project_dir}")
+        self.host.run(f"rm -rf {self.host.project_dir}")
         self.web_proxy.teardown()
         self.process_manager.uninstall_services()
         self.process_manager.reload_configuration()

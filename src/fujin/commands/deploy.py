@@ -19,14 +19,14 @@ class Deploy(AppCommand):
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
 
-        self.host.make_project_dir(project_name=self.config.app)
+        self.host.make_project_dir()
         self.transfer_files()
         self.install_project()
         self.release()
 
-        # self.process_manager.install_services()
-        # self.process_manager.reload_configuration()
-        # self.process_manager.restart_services()
+        self.process_manager.install_services()
+        self.process_manager.reload_configuration()
+        self.process_manager.restart_services()
 
         self.web_proxy.setup()
         self.hook_manager.post_deploy()
@@ -41,24 +41,26 @@ class Deploy(AppCommand):
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        project_dir = self.host.project_dir(self.config.app)
-        self.host.put(str(self.config.requirements), f"{project_dir}/requirements.txt")
-        self.host.put(str(self.host.config.envfile), f"{project_dir}/.env")
         self.host.put(
-            str(self.config.distfile), f"{project_dir}/{self.config.distfile.name}"
+            str(self.config.requirements), f"{self.host.project_dir}/requirements.txt"
         )
-        with self.host.cd_project_dir(self.config.app):
+        self.host.put(str(self.host.config.envfile), f"{self.host.project_dir}/.env")
+        self.host.put(
+            str(self.config.distfile),
+            f"{self.host.project_dir}/{self.config.distfile.name}",
+        )
+        with self.host.cd_project_dir():
             self.host.run(f"echo {self.config.python_version} > .python-version")
 
     def install_project(self):
         if self.config.skip_project_install:
             return
-        with self.host.cd_project_dir(self.config.app):
+        with self.host.cd_project_dir():
             self.host.run_uv("venv")
             self.host.run_uv("pip install -r requirements.txt")
             self.host.run_uv(f"pip install {self.config.distfile.name}")
 
     def release(self):
-        with self.host.cd_project_dir(self.config.app):
+        with self.host.cd_project_dir():
             if self.config.release_command:
                 self.host.run(f"source .env && {self.config.release_command}")

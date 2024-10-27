@@ -9,7 +9,6 @@ try:
 except ImportError:
     from enum import Enum
 
-
     class StrEnum(str, Enum):
         pass
 
@@ -36,9 +35,13 @@ class HookManager:
     def _run_hook(self, type_: Hook) -> None:
 
         if hooks := self.hooks.get(type_):
-            with self.host.cd_project_dir(self.app):
+            with self.host.cd_project_dir():
                 for name, command in hooks.items():
-                    cmd = command.replace("uv", uv_path) if command.startswith("uv") else command
+                    cmd = (
+                        command.replace("uv", uv_path)
+                        if command.startswith("uv")
+                        else command
+                    )
                     rich_print(f"[blue]Running {type_} hook {name} [/blue]")
                     self.host.run(f"source .env && {cmd}")
 

@@ -19,7 +19,7 @@ class WebProxy(msgspec.Struct):
         self.host.run_uv("tool uninstall caddy")
 
     def setup(self):
-        with self.host.cd_project_dir(self.config.app):
+        with self.host.cd_project_dir():
             self.host.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")
             self.host.run(
                 f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"

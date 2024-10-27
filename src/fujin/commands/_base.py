@@ -54,7 +54,7 @@ class AppCommand(BaseCommand):
             )
         if not host_config:
             raise cappa.Exit(f"Host {self._host} does not exist", code=1)
-        return Host(config=host_config)
+        return Host(config=host_config, app=self.config.app)
 
     @cached_property
     def web_proxy(self) -> WebProxy:

@@ -3,13 +3,13 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property
+from typing import TYPE_CHECKING
 
 import cappa
 from fabric import Connection
 from invoke import Responder
 from invoke.exceptions import UnexpectedExit
 from paramiko.ssh_exception import AuthenticationException
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .config import HostConfig
@@ -17,12 +17,17 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Host:
+    app: str
     config: HostConfig
 
     def __str__(self):
         return self.config.ip
 
-    @property
+    @cached_property
+    def project_dir(self) -> str:
+        return f"{self.config.projects_dir}/{self.app}"
+
+    @cached_property
     def watchers(self) -> list[Responder]:
         if not self.config.password:
             return []
@@ -75,13 +80,10 @@ class Host:
     def run_uv(self, args: str, **kwargs):
         return self.run(f"/home/{self.config.user}/.cargo/bin/uv {args}", **kwargs)
 
-    def make_project_dir(self, project_name: str):
-        self.run(f"mkdir -p {self.project_dir(project_name)}")
-
-    def project_dir(self, project_name: str) -> str:
-        return f"{self.config.projects_dir}/{project_name}"
+    def make_project_dir(self):
+        self.run(f"mkdir -p {self.project_dir}")
 
     @contextmanager
-    def cd_project_dir(self, project_name: str):
-        with self.connection.cd(self.project_dir(project_name)):
+    def cd_project_dir(self):
+        with self.connection.cd(self.project_dir):
             yield

@@ -32,7 +32,7 @@ class App(AppCommand):
         command: str,
         interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
-        with self.host.cd_project_dir(self.config.app):
+        with self.host.cd_project_dir():
             if interactive:
                 self.host.run(
                     f"source .env && {self.config.app_bin} {command}", pty=interactive
