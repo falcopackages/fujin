@@ -22,10 +22,13 @@ class Down(AppCommand):
         )
         if confirm == "no":
             return
-        self.hook_manager.pre_teardown()
-        self.host.run(f"rm -rf {self.host.project_dir}")
-        self.web_proxy.teardown()
-        self.process_manager.uninstall_services()
-        self.process_manager.reload_configuration()
-        self.hook_manager.post_teardown()
-        self.stdout.output("[green]Project teardown completed successfully![/green]")
+        with self.connection() as conn:
+            self.hook_manager(conn).pre_teardown()
+            conn.run(f"rm -rf {self.project_dir}")
+            self.web_proxy(conn).teardown()
+            self.process_manager(conn).uninstall_services()
+            self.process_manager(conn).reload_configuration()
+            self.hook_manager(conn).post_teardown()
+            self.stdout.output(
+                "[green]Project teardown completed successfully![/green]"
+            )

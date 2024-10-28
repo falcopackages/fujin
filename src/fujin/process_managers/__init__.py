@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
+from fabric import Connection
+
 if TYPE_CHECKING:
     from fujin.config import Config
     from fujin.host import Host
 
 
 class ProcessManager(Protocol):
-    host: Host
+    conn: Connection
     config: Config
     service_names: list[str]
 

@@ -1,34 +1,34 @@
 import json
 
 import msgspec
+from fabric import Connection
 
 from fujin.config import Config
-from fujin.host import Host
 
 
 class WebProxy(msgspec.Struct):
-    host: Host
+    conn: Connection
+    domain_name: str
     config: Config
 
     def install(self):
-        self.host.run_uv("tool install caddy-bin")
-        self.host.run(f"/home/{self.host.config.user}/.local/bin/caddy start", pty=True)
+        self.conn.run("uv tool install caddy-bin")
+        self.conn.run(f"caddy start", pty=True)
 
     def uninstall(self):
-        self.host.run_uv(f"/home/{self.host.config.user}/.local/bin/caddy stop")
-        self.host.run_uv("tool uninstall caddy")
+        self.conn.run("caddy stop")
+        self.conn.run("uv tool uninstall caddy")
 
     def setup(self):
-        with self.host.cd_project_dir():
-            self.host.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")
-            self.host.run(
-                f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
-            )
+        self.conn.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")
+        self.conn.run(
+            f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
+        )
 
     def teardown(self):
         empty_config = {"apps": {"http": {"servers": {self.config.app: {}}}}}
-        self.host.run(f"echo '{json.dumps(empty_config)}' > caddy.json")
-        self.host.run(
+        self.conn.run(f"echo '{json.dumps(empty_config)}' > caddy.json")
+        self.conn.run(
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
         )
 
@@ -41,7 +41,7 @@ class WebProxy(msgspec.Struct):
                             "listen": [":443"],
                             "routes": [
                                 {
-                                    "match": [{"host": [self.host.config.domain_name]}],
+                                    "match": [{"host": [self.domain_name]}],
                                     "handle": [
                                         {
                                             "handler": "reverse_proxy",

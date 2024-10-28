@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 
 import cappa
+from fabric import Connection
 
 from fujin.commands import AppCommand
 
@@ -13,54 +14,58 @@ from fujin.commands import AppCommand
 class Deploy(AppCommand):
 
     def __call__(self):
-        self.hook_manager.pre_deploy()
         try:
             subprocess.run(self.config.build_command.split(), check=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
 
-        self.host.make_project_dir()
-        self.transfer_files()
-        self.install_project()
-        self.release()
+        with self.connection() as conn:
+            conn.run(f"mkdir -p {self.project_dir}")
+            with conn.cd(self.project_dir):
+                self.hook_manager(conn).pre_deploy()
+                self.transfer_files(conn)
 
-        self.process_manager.install_services()
-        self.process_manager.reload_configuration()
-        self.process_manager.restart_services()
+        with self.app_environment() as conn:
+            self.install_project(conn)
+            self.release(conn)
+            self.process_manager(conn).install_services()
+            self.process_manager(conn).reload_configuration()
+            self.process_manager(conn).restart_services()
 
-        self.web_proxy.setup()
-        self.hook_manager.post_deploy()
+            self.web_proxy(conn).setup()
+            self.hook_manager(conn).post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
-            f"[blue]Access the deployed project at: https://{self.host.config.domain_name}[/blue]"
+            f"[blue]Access the deployed project at: https://{self.host_config.domain_name}[/blue]"
         )
 
-    def transfer_files(self):
-        if not self.host.config.envfile.exists():
-            raise cappa.Exit(f"{self.host.config.envfile} not found", code=1)
+    def transfer_files(self, conn: Connection):
+        if not self.host_config.envfile.exists():
+            raise cappa.Exit(f"{self.host_config.envfile} not found", code=1)
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        self.host.put(
-            str(self.config.requirements), f"{self.host.project_dir}/requirements.txt"
-        )
-        self.host.put(str(self.host.config.envfile), f"{self.host.project_dir}/.env")
-        self.host.put(
+        conn.put(str(self.config.requirements), f"{self.project_dir}/requirements.txt")
+        conn.put(str(self.host_config.envfile), f"{self.project_dir}/.env")
+        conn.put(
             str(self.config.distfile),
-            f"{self.host.project_dir}/{self.config.distfile.name}",
+            f"{self.project_dir}/{self.config.distfile.name}",
         )
-        with self.host.cd_project_dir():
-            self.host.run(f"echo {self.config.python_version} > .python-version")
+        envrun = f"""
+source .env
+export UV_COMPILE_BYTECODE=1
+export UV_PYTHON=python{self.config.python_version}
+export PATH=".venv/bin:$PATH"
+"""
+        conn.run(f"echo '{envrun.strip()}' > envrun")
 
-    def install_project(self):
+    def install_project(self, conn: Connection):
         if self.config.skip_project_install:
             return
-        with self.host.cd_project_dir():
-            self.host.run_uv("venv")
-            self.host.run_uv("pip install -r requirements.txt")
-            self.host.run_uv(f"pip install {self.config.distfile.name}")
+        conn.run("uv venv")
+        conn.run("uv pip install -r requirements.txt")
+        conn.run(f"uv pip install {self.config.distfile.name}")
 
-    def release(self):
-        with self.host.cd_project_dir():
-            if self.config.release_command:
-                self.host.run(f"source .env && {self.config.release_command}")
+    def release(self, conn: Connection):
+        if self.config.release_command:
+            conn.run(f"source .env && {self.config.release_command}")

@@ -1,9 +1,11 @@
+from fabric import Connection
+
 from fujin.config import Config
-from fujin.host import Host
 
 
 class WebProxy:
-    host: Host
+    conn: Connection
+    domain_name: str
     config: Config
 
     def install(self):

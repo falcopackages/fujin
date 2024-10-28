@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
+from fabric import Connection
 from rich import print as rich_print
-
-from fujin.host import Host
 
 try:
     from enum import StrEnum
@@ -23,27 +22,19 @@ class Hook(StrEnum):
 
 
 HooksDict = dict[Hook, dict]
-uv_path = "~/.cargo/bin/uv"
 
 
 @dataclass(frozen=True, slots=True)
 class HookManager:
     app: str
     hooks: HooksDict
-    host: Host
+    conn: Connection
 
     def _run_hook(self, type_: Hook) -> None:
-
         if hooks := self.hooks.get(type_):
-            with self.host.cd_project_dir():
-                for name, command in hooks.items():
-                    cmd = (
-                        command.replace("uv", uv_path)
-                        if command.startswith("uv")
-                        else command
-                    )
-                    rich_print(f"[blue]Running {type_} hook {name} [/blue]")
-                    self.host.run(f"source .env && {cmd}")
+            for name, command in hooks.items():
+                rich_print(f"[blue]Running {type_} hook {name} [/blue]")
+                self.conn.run(command)
 
     def pre_deploy(self) -> None:
         self._run_hook(Hook.PRE_DEPLOY)

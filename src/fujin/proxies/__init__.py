@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from multiprocessing.connection import Connection
+from typing import Protocol
 
-if TYPE_CHECKING:
-    from fujin.config import Config
-    from fujin.host import Host
+from fujin.config import Config
 
 
 class WebProxy(Protocol):
-    host: Host
+    conn: Connection
     config: Config
 
     def install(self) -> None: ...

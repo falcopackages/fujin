@@ -32,16 +32,12 @@ class App(AppCommand):
         command: str,
         interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
-        with self.host.cd_project_dir():
+        with self.app_environment() as conn:
             if interactive:
-                self.host.run(
-                    f"source .env && {self.config.app_bin} {command}", pty=interactive
-                )
+                conn.run(f"{self.config.app_bin} {command}", pty=interactive, warn=True)
             else:
                 self.stdout.output(
-                    self.host.run(
-                        f"source .env && {self.config.app_bin} {command}", hide=True
-                    ).stdout
+                    conn.run(f"{self.config.app_bin} {command}", hide=True).stdout
                 )
 
     @cappa.command(
@@ -53,7 +49,8 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self.process_manager.start_services(name)
+        with self.app_environment() as conn:
+            self.process_manager(conn).start_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} started successfully![/green]")
 
@@ -66,7 +63,8 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self.process_manager.restart_services(name)
+        with self.app_environment() as conn:
+            self.process_manager(conn).restart_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} restarted successfully![/green]")
 
@@ -79,7 +77,8 @@ class App(AppCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        self.process_manager.stop_services(name)
+        with self.app_environment() as conn:
+            self.process_manager(conn).stop_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} stopped successfully![/green]")
 
@@ -88,4 +87,5 @@ class App(AppCommand):
         self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
     ):
         # TODO: flash out this more
-        self.process_manager.service_logs(name=name, follow=follow)
+        with self.app_environment() as conn:
+            self.process_manager(conn).service_logs(name=name, follow=follow)

@@ -3,13 +3,13 @@ app = "bookstore"
 requirements = "requirements.txt"
 python_version = "3.13"
 build_command = "uv build"
-release_command = ".venv/bin/bookstore migrate"
+release_command = "bookstore migrate"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
 
 [hooks.post_deploy]
 pip_list = "uv pip list"
-migrate = ".venv/bin/bookstore migrate" # useless just so show the example
+migrate = "bookstore migrate" # useless just so show the example
 
 [aliases]
 console = "app exec -i shell"
@@ -17,16 +17,14 @@ dbshell = "app exec -i dbshell"
 shell = "server exec -i bash"
 
 [processes]
-web = ".venv/bin/bookstore prodserver"
-worker = ".venv/bin/bookstore qcluster"
+web = ".venv/bin/bookstore runserver"
+#worker = ".venv/bin/bookstore qcluster"
 
 [hosts.primary]
 default = true
 ip = "127.0.0.1"
 domain_name = "mybookstore.com"
 envfile = ".env.prod"
-user = "test"
-password_env = "TEST_PASSWORD"
-key_filename = "./../../../id_rsa"
+user = "tobi"
+key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
 ssh_port = 2222
-# projects_dir = ".local/share/fujin" # relative to user home
