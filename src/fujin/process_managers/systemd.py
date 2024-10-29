@@ -4,9 +4,9 @@ import importlib.util
 from dataclasses import dataclass
 from pathlib import Path
 
+from fujin.config import Config
+from fujin.config import HostConfig
 from fujin.connection import Connection
-
-from fujin.config import Config, HostConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,7 +30,7 @@ class ProcessManager:
             app_name=config.app_name,
             project_dir=host_config.project_dir(config.app_name),
             conn=conn,
-            user=host_config.user
+            user=host_config.user,
         )
 
     @property
@@ -61,7 +61,7 @@ class ProcessManager:
 
     def get_configuration_files(self) -> list[SystemdFile]:
         templates_folder = (
-                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()

@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 
 import cappa
-
 from fujin.commands.app import App
 from fujin.commands.config import ConfigCMD
 from fujin.commands.deploy import Deploy
@@ -21,7 +20,7 @@ else:
 class Fujin:
     subcommands: cappa.Subcommands[
         Up | Deploy | Redeploy | App | Server | ConfigCMD | Down
-        ]
+    ]
 
 
 def main():

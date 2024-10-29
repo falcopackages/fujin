@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 
 import msgspec
+from fujin.config import Config
+from fujin.config import HostConfig
 from fujin.connection import Connection
-
-from fujin.config import Config, HostConfig
 
 
 class WebProxy(msgspec.Struct):
@@ -15,7 +15,9 @@ class WebProxy(msgspec.Struct):
     upstream: str
 
     @classmethod
-    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> WebProxy:
+    def create(
+        cls, config: Config, host_config: HostConfig, conn: Connection
+    ) -> WebProxy:
         return cls(
             conn=conn,
             domain_name=host_config.domain_name,
@@ -57,9 +59,7 @@ class WebProxy(msgspec.Struct):
                                     "handle": [
                                         {
                                             "handler": "reverse_proxy",
-                                            "upstreams": [
-                                                {"dial": self.upstream}
-                                            ],
+                                            "upstreams": [{"dial": self.upstream}],
                                         }
                                     ],
                                 }

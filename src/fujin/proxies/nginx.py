@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import os
 
 import msgspec
+from fujin.config import Config
+from fujin.config import HostConfig
 from fujin.connection import Connection
-
-from fujin.config import Config, HostConfig
 
 CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
 
@@ -19,7 +20,9 @@ class WebProxy(msgspec.Struct):
     upstream: str
 
     @classmethod
-    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> WebProxy:
+    def create(
+        cls, config: Config, host_config: HostConfig, conn: Connection
+    ) -> WebProxy:
         return cls(
             conn=conn,
             domain_name=host_config.domain_name,
@@ -42,11 +45,11 @@ class WebProxy(msgspec.Struct):
         self.conn.run(
             f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.app_name}",
             hide="out",
-            pty=True
+            pty=True,
         )
         self.conn.run(
             f"sudo ln -sf /etc/nginx/sites-available/{self.app_name} /etc/nginx/sites-enabled/{self.app_name}",
-            pty=True
+            pty=True,
         )
         self.conn.run("sudo systemctl restart nginx", pty=True)
         self.conn.run(

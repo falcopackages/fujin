@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+from fujin.config import Config
+from fujin.config import HostConfig
 from fujin.connection import Connection
-
-from fujin.config import Config, HostConfig
 
 
 class WebProxy:
-
     @classmethod
     def create(cls, _: Config, __: HostConfig, ___: Connection) -> WebProxy:
         return cls()

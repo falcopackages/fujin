@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
+from typing import TYPE_CHECKING
 
 from fujin.connection import Connection
 
@@ -12,8 +13,9 @@ class ProcessManager(Protocol):
     service_names: list[str]
 
     @classmethod
-    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> ProcessManager:
-        ...
+    def create(
+        cls, config: Config, host_config: HostConfig, conn: Connection
+    ) -> ProcessManager: ...
 
     def get_service_name(self, process_name: str): ...
 

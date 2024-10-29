@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import cappa
 from fujin.commands import AppCommand
+
 from .deploy import Deploy
 
 
 @cappa.command(help="Redeploy the application to apply code and environment changes")
 class Redeploy(AppCommand):
-
     def __call__(self):
         deploy = Deploy(_host=self._host)
         with self.app_environment() as conn:

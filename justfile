@@ -34,6 +34,24 @@ fujin *ARGS:
     ../../../.venv/bin/python -m fujin {{ ARGS }}
 
 # -------------------------------------------------------------------------
+# Maintenance
+#---------------------------------------------------------------------------
+
+@fmt:
+    just --fmt --unstable
+    uvx ruff format
+    uvx pre-commit run pyproject-fmt
+
+@lint:
+    uvx mypy .
+
+@docs-serve:
+    uv run --group docs sphinx-autobuild docs docs/_build/html --port 8002
+
+@docs-requirements:
+    uv --group docs pip compile pyproject.toml -o requirements.txt
+
+# -------------------------------------------------------------------------
 # RELEASE UTILITIES
 #---------------------------------------------------------------------------
 

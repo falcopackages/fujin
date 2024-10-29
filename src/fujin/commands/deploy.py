@@ -11,7 +11,6 @@ from fujin.connection import Connection
     help="Deploy the project by building, transferring files, installing, and configuring services"
 )
 class Deploy(AppCommand):
-
     def __call__(self):
         try:
             subprocess.run(self.config.build_command.split(), check=True)

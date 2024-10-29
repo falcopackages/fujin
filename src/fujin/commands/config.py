@@ -5,18 +5,16 @@ from typing import Annotated
 
 import cappa
 import tomli_w
+from fujin.commands import BaseCommand
+from fujin.config import tomllib
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
-from fujin.commands import BaseCommand
-from fujin.config import tomllib
-
 
 @cappa.command(name="config", help="Manage application configuration")
 class ConfigCMD(BaseCommand):
-
     @cappa.command(help="Display the parsed configuration")
     def show(self):
         console = Console()
@@ -125,7 +123,9 @@ def simple_config() -> dict:
             "type": "fujin.proxies.caddy",
         },
         "hooks": {"pre_deploy": f".venv/bin/{app_name} migrate"},
-        "processes": {"web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"},
+        "processes": {
+            "web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"
+        },
         "aliases": {"shell": "server exec -i bash"},
         "hosts": {
             "primary": {

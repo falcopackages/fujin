@@ -10,7 +10,6 @@ from fujin.commands import AppCommand
 
 @cappa.command(help="Manage server operations")
 class Server(AppCommand):
-
     @cappa.command(help="Display information about the host system")
     def info(self):
         with self.connection() as conn:
@@ -47,9 +46,9 @@ class Server(AppCommand):
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
     def exec(
-            self,
-            command: str,
-            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+        self,
+        command: str,
+        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         with self.connection() as conn:
             if interactive:
@@ -61,13 +60,15 @@ class Server(AppCommand):
         name="create-user", help="Create a new user with sudo and ssh access"
     )
     def create_user(
-            self,
-            name: str,
-            with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
+        self,
+        name: str,
+        with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
     ):
         with self.connection() as conn:
-            run_pty = partial(conn.run,  pty=True)
-            run_pty(f"sudo adduser --disabled-password --gecos '' {name}",)
+            run_pty = partial(conn.run, pty=True)
+            run_pty(
+                f"sudo adduser --disabled-password --gecos '' {name}",
+            )
             run_pty(f"sudo mkdir -p /home/{name}/.ssh")
             run_pty(f"sudo cp ~/.ssh/authorized_keys /home/{name}/.ssh/")
             run_pty(f"sudo chown -R {name}:{name} /home/{name}/.ssh")
