@@ -14,13 +14,14 @@ class App(AppCommand):
     def info(self):
         # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped
         # systemctl is-enabled  to check is a service is enabled
-        infos = {
-            "app": self.config.app,
-            "app_bin": self.config.app_bin,
-            "version": self.config.version,
-            "python_version": self.config.python_version,
-            "services": ", ".join(s for s in self.process_manager.service_names),
-        }
+        with self.app_environment() as conn:
+            infos = {
+                "app_name": self.config.app_name,
+                "app_bin": self.config.app_bin,
+                "version": self.config.version,
+                "python_version": self.config.python_version,
+                "services": ", ".join(s for s in self.create_process_manager(conn).service_names),
+            }
         formatted_text = "\n".join(
             f"[bold green]{key}:[/bold green] {value}" for key, value in infos.items()
         )
@@ -50,7 +51,7 @@ class App(AppCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.process_manager(conn).start_services(name)
+            self.create_process_manager(conn).start_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} started successfully![/green]")
 
@@ -64,7 +65,7 @@ class App(AppCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.process_manager(conn).restart_services(name)
+            self.create_process_manager(conn).restart_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} restarted successfully![/green]")
 
@@ -78,7 +79,7 @@ class App(AppCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.process_manager(conn).stop_services(name)
+            self.create_process_manager(conn).stop_services(name)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} stopped successfully![/green]")
 
@@ -88,4 +89,4 @@ class App(AppCommand):
     ):
         # TODO: flash out this more
         with self.app_environment() as conn:
-            self.process_manager(conn).service_logs(name=name, follow=follow)
+            self.create_process_manager(conn).service_logs(name=name, follow=follow)

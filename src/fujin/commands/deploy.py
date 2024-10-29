@@ -3,9 +3,8 @@ from __future__ import annotations
 import subprocess
 
 import cappa
-from fabric import Connection
-
 from fujin.commands import AppCommand
+from fujin.connection import Connection
 
 
 @cappa.command(
@@ -22,18 +21,19 @@ class Deploy(AppCommand):
         with self.connection() as conn:
             conn.run(f"mkdir -p {self.project_dir}")
             with conn.cd(self.project_dir):
-                self.hook_manager(conn).pre_deploy()
+                self.create_hook_manager(conn).pre_deploy()
                 self.transfer_files(conn)
 
         with self.app_environment() as conn:
+            process_manager = self.create_process_manager(conn)
             self.install_project(conn)
             self.release(conn)
-            self.process_manager(conn).install_services()
-            self.process_manager(conn).reload_configuration()
-            self.process_manager(conn).restart_services()
+            process_manager.install_services()
+            process_manager.reload_configuration()
+            process_manager.restart_services()
 
-            self.web_proxy(conn).setup()
-            self.hook_manager(conn).post_deploy()
+            self.create_web_proxy(conn).setup()
+            self.create_hook_manager(conn).post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.host_config.domain_name}[/blue]"

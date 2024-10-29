@@ -17,8 +17,8 @@ from .hooks import HooksDict
 
 
 class Config(msgspec.Struct, kw_only=True):
-    app: str
-    app_bin: str = ".venv/bin/{app}"
+    app_name: str
+    app_bin: str = ".venv/bin/{app_name}"
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
     python_version: str = msgspec.field(default_factory=lambda: find_python_version())
     build_command: str
@@ -34,7 +34,7 @@ class Config(msgspec.Struct, kw_only=True):
     hooks: HooksDict = msgspec.field(default=dict)
 
     def __post_init__(self):
-        self.app_bin = self.app_bin.format(app=self.app)
+        self.app_bin = self.app_bin.format(app_name=self.app_name)
         self._distfile = self._distfile.format(version=self.version)
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
@@ -98,6 +98,9 @@ class HostConfig(msgspec.Struct, kw_only=True):
             msg = f"Env {self.password_env} can not be found"
             raise ImproperlyConfiguredError(msg)
         return password
+
+    def project_dir(self, app_name: str) -> str:
+        return f"{self.projects_dir}/{app_name}"
 
 
 class Webserver(msgspec.Struct):

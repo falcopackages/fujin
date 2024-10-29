@@ -1,7 +1,7 @@
 # TODO: add tons of comments in this file
 [Unit]
-Description={app} daemon
-Requires={app}.socket
+Description={app_name} daemon
+Requires={app_name}.socket
 After=network.target
 
 [Service]
@@ -9,7 +9,7 @@ Type=notify
 NotifyAccess=main
 User={user}
 Group=www-data
-RuntimeDirectory={app}
+RuntimeDirectory={app_name}
 WorkingDirectory={project_dir}
 ExecStart={project_dir}/{command}
 EnvironmentFile={project_dir}/.env

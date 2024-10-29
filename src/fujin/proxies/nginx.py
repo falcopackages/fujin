@@ -1,9 +1,10 @@
+from __future__ import annotations
 import os
 
 import msgspec
-from fabric import Connection
+from fujin.connection import Connection
 
-from fujin.config import Config
+from fujin.config import Config, HostConfig
 
 CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
 
@@ -14,7 +15,17 @@ CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
 class WebProxy(msgspec.Struct):
     conn: Connection
     domain_name: str
-    config: Config
+    app_name: str
+    upstream: str
+
+    @classmethod
+    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> WebProxy:
+        return cls(
+            conn=conn,
+            domain_name=host_config.domain_name,
+            upstream=config.webserver.upstream,
+            app_name=config.app_name,
+        )
 
     def install(self):
         # TODO: won"t always install the latest version, install certbot with uv ?
@@ -29,24 +40,26 @@ class WebProxy(msgspec.Struct):
     def setup(self):
         # TODO should not be running all this everytime
         self.conn.run(
-            f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.config.app}",
+            f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.app_name}",
             hide="out",
+            pty=True
         )
         self.conn.run(
-            f"sudo ln -sf /etc/nginx/sites-available/{self.config.app} /etc/nginx/sites-enabled/{self.config.app}"
+            f"sudo ln -sf /etc/nginx/sites-available/{self.app_name} /etc/nginx/sites-enabled/{self.app_name}",
+            pty=True
         )
-        self.conn.run("sudo systemctl restart nginx")
+        self.conn.run("sudo systemctl restart nginx", pty=True)
         self.conn.run(
             f"certbot --nginx -d {self.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
         )
         # Updating local Nginx configuration
         self.conn.get(
-            f"/etc/nginx/sites-available/{self.config.app}",
-            f".fujin/{self.config.app}",
+            f"/etc/nginx/sites-available/{self.app_name}",
+            f".fujin/{self.app_name}",
         )
         # Enabling certificate auto-renewal
-        self.conn.run("sudo systemctl enable certbot.timer")
-        self.conn.run("sudo systemctl start certbot.timer")
+        self.conn.run("sudo systemctl enable certbot.timer", pty=True)
+        self.conn.run("sudo systemctl start certbot.timer", pty=True)
 
     def teardown(self):
         pass
@@ -58,7 +71,7 @@ server {{
    server_name {self.domain_name};
 
    location / {{
-      proxy_pass {self.config.webserver.upstream};
+      proxy_pass {self.upstream};
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

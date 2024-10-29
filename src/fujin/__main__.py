@@ -11,8 +11,6 @@ from fujin.commands.redeploy import Redeploy
 from fujin.commands.server import Server
 from fujin.commands.up import Up
 
-from .config import Config
-
 if sys.version_info >= (3, 11):
     import tomllib
 else:
@@ -23,7 +21,7 @@ else:
 class Fujin:
     subcommands: cappa.Subcommands[
         Up | Deploy | Redeploy | App | Server | ConfigCMD | Down
-    ]
+        ]
 
 
 def main():

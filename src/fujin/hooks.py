@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from fabric import Connection
+from fujin.connection import Connection
 from rich import print as rich_print
 
 try:
@@ -26,7 +26,7 @@ HooksDict = dict[Hook, dict]
 
 @dataclass(frozen=True, slots=True)
 class HookManager:
-    app: str
+    app_name: str
     hooks: HooksDict
     conn: Connection
 

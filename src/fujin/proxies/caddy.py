@@ -1,15 +1,27 @@
+from __future__ import annotations
+
 import json
 
 import msgspec
-from fabric import Connection
+from fujin.connection import Connection
 
-from fujin.config import Config
+from fujin.config import Config, HostConfig
 
 
 class WebProxy(msgspec.Struct):
     conn: Connection
     domain_name: str
-    config: Config
+    app_name: str
+    upstream: str
+
+    @classmethod
+    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> WebProxy:
+        return cls(
+            conn=conn,
+            domain_name=host_config.domain_name,
+            upstream=config.webserver.upstream,
+            app_name=config.app_name,
+        )
 
     def install(self):
         self.conn.run("uv tool install caddy-bin")
@@ -26,7 +38,7 @@ class WebProxy(msgspec.Struct):
         )
 
     def teardown(self):
-        empty_config = {"apps": {"http": {"servers": {self.config.app: {}}}}}
+        empty_config = {"apps": {"http": {"servers": {self.app_name: {}}}}}
         self.conn.run(f"echo '{json.dumps(empty_config)}' > caddy.json")
         self.conn.run(
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
@@ -37,7 +49,7 @@ class WebProxy(msgspec.Struct):
             "apps": {
                 "http": {
                     "servers": {
-                        self.config.app: {
+                        self.app_name: {
                             "listen": [":443"],
                             "routes": [
                                 {
@@ -46,7 +58,7 @@ class WebProxy(msgspec.Struct):
                                         {
                                             "handler": "reverse_proxy",
                                             "upstreams": [
-                                                {"dial": self.config.webserver.upstream}
+                                                {"dial": self.upstream}
                                             ],
                                         }
                                     ],

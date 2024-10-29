@@ -1,5 +1,5 @@
 [Unit]
-Description={app} Worker
+Description={app_name} Worker
 
 [Service]
 User={user}

@@ -113,25 +113,25 @@ class ConfigCMD(BaseCommand):
 
 
 def simple_config() -> dict:
-    app = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+    app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
 
     config = {
-        "app": app,
+        "app_name": app_name,
         "version": "0.1.0",
         "build_command": "uv build",
-        "distfile": f"dist/{app}-{{version}}-py3-none-any.whl",
+        "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
         "webserver": {
             "upstream": "localhost:8000",
             "type": "fujin.proxies.caddy",
         },
-        "hooks": {"pre_deploy": f".venv/bin/{app} migrate"},
-        "processes": {"web": f".venv/bin/gunicorn {app}.wsgi:app --bind 0.0.0.0:8000"},
+        "hooks": {"pre_deploy": f".venv/bin/{app_name} migrate"},
+        "processes": {"web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"},
         "aliases": {"shell": "server exec -i bash"},
         "hosts": {
             "primary": {
                 "ip": "127.0.0.1",
                 "user": "root",
-                "domain_name": f"{app}.com",
+                "domain_name": f"{app_name}.com",
                 "envfile": ".env.prod",
                 "default": True,
             }
@@ -142,7 +142,7 @@ def simple_config() -> dict:
     pyproject_toml = Path("pyproject.toml")
     if pyproject_toml.exists():
         pyproject = tomllib.loads(pyproject_toml.read_text())
-        config["app"] = pyproject.get("project", {}).get("name", app)
+        config["app"] = pyproject.get("project", {}).get("name", app_name)
         if pyproject.get("project", {}).get("version"):
             # fujin will read the version itself from the pyproject
             config.pop("version")

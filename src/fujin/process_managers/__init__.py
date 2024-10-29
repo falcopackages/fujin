@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from fabric import Connection
+from fujin.connection import Connection
 
 if TYPE_CHECKING:
-    from fujin.config import Config
-    from fujin.host import Host
+    from fujin.config import Config, HostConfig
 
 
 class ProcessManager(Protocol):
-    conn: Connection
-    config: Config
     service_names: list[str]
 
-    def get_service_name(self, name: str): ...
+    @classmethod
+    def create(cls, config: Config, host_config: HostConfig, conn: Connection) -> ProcessManager:
+        ...
+
+    def get_service_name(self, process_name: str): ...
 
     def install_services(self) -> None: ...
 

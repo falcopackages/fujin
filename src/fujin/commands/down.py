@@ -3,9 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import cappa
-from rich.prompt import Prompt
-
 from fujin.commands import AppCommand
+from rich.prompt import Prompt
 
 
 @cappa.command(
@@ -23,12 +22,14 @@ class Down(AppCommand):
         if confirm == "no":
             return
         with self.connection() as conn:
-            self.hook_manager(conn).pre_teardown()
+            hook_manager = self.create_hook_manager(conn)
+            hook_manager.pre_teardown()
+            process_manager = self.create_process_manager(conn)
             conn.run(f"rm -rf {self.project_dir}")
-            self.web_proxy(conn).teardown()
-            self.process_manager(conn).uninstall_services()
-            self.process_manager(conn).reload_configuration()
-            self.hook_manager(conn).post_teardown()
+            self.create_web_proxy(conn).teardown()
+            process_manager.uninstall_services()
+            process_manager.reload_configuration()
+            hook_manager.post_teardown()
             self.stdout.output(
                 "[green]Project teardown completed successfully![/green]"
             )

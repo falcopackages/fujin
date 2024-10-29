@@ -1,4 +1,4 @@
-app = "bookstore"
+app_name = "bookstore"
 #version = "0.1.0" infer from the pyproject.toml file
 requirements = "requirements.txt"
 python_version = "3.13"
@@ -25,6 +25,7 @@ default = true
 ip = "127.0.0.1"
 domain_name = "mybookstore.com"
 envfile = ".env.prod"
-user = "tobi"
+user = "jean"
+password_env = "PASS"
 key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
 ssh_port = 2222

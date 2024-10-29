@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import secrets
+from functools import partial
 from typing import Annotated
 
 import cappa
-
 from fujin.commands import AppCommand
 
 
@@ -23,17 +23,17 @@ class Server(AppCommand):
     @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
         with self.connection() as conn:
-            self.hook_manager.pre_bootstrap()
-            conn.run("sudo apt update")
-            conn.run("sudo apt upgrade -y")
-            conn.run("sudo apt install -y sqlite3 curl")
+            hook_manager = self.create_hook_manager(conn)
+            hook_manager.pre_bootstrap()
+            conn.run("sudo apt update && sudo apt upgrade -y", pty=True)
+            conn.run("sudo apt install -y sqlite3 curl", pty=True)
             result = conn.run("command -v uv", warn=True)
             if not result.ok:
                 conn.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
                 conn.run("uv tool update-shell")
             conn.run("uv tool install fastfetch-bin-edge")
-            self.web_proxy(conn).install()
-            self.hook_manager.post_bootstrap()
+            self.create_web_proxy(conn).install()
+            hook_manager.post_bootstrap()
             self.stdout.output(
                 "[green]Server bootstrap completed successfully![/green]"
             )
@@ -41,15 +41,15 @@ class Server(AppCommand):
     @cappa.command(help="Stop and uninstall the web proxy")
     def uninstall_proxy(self):
         with self.connection() as conn:
-            self.web_proxy(conn).uninstall()
+            self.create_web_proxy(conn).uninstall()
 
     @cappa.command(
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
     def exec(
-        self,
-        command: str,
-        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+            self,
+            command: str,
+            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
     ):
         with self.connection() as conn:
             if interactive:
@@ -61,20 +61,21 @@ class Server(AppCommand):
         name="create-user", help="Create a new user with sudo and ssh access"
     )
     def create_user(
-        self,
-        name: str,
-        with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
+            self,
+            name: str,
+            with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
     ):
         with self.connection() as conn:
-            conn.run(f"sudo adduser --disabled-password --gecos '' {name}")
-            conn.run(f"sudo mkdir -p /home/{name}/.ssh")
-            conn.run(f"sudo cp ~/.ssh/authorized_keys /home/{name}/.ssh/")
-            conn.run(f"sudo chown -R {name}:{name} /home/{name}/.ssh")
+            run_pty = partial(conn.run,  pty=True)
+            run_pty(f"sudo adduser --disabled-password --gecos '' {name}",)
+            run_pty(f"sudo mkdir -p /home/{name}/.ssh")
+            run_pty(f"sudo cp ~/.ssh/authorized_keys /home/{name}/.ssh/")
+            run_pty(f"sudo chown -R {name}:{name} /home/{name}/.ssh")
             if with_password:
                 password = secrets.token_hex(8)
-                conn.run(f"echo '{name}:{password}' | sudo chpasswd")
+                run_pty(f"echo '{name}:{password}' | sudo chpasswd")
                 self.stdout.output(f"[green]Generated password: [/green]{password}")
-            conn.run(f"sudo chmod 700 /home/{name}/.ssh")
-            conn.run(f"sudo chmod 600 /home/{name}/.ssh/authorized_keys")
-            conn.run(f"echo '{name} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers")
+            run_pty(f"sudo chmod 700 /home/{name}/.ssh")
+            run_pty(f"sudo chmod 600 /home/{name}/.ssh/authorized_keys")
+            run_pty(f"echo '{name} ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers")
             self.stdout.output(f"[green]New user {name} created successfully![/green]")

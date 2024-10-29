@@ -340,7 +340,7 @@ wheels = [
 
 [[package]]
 name = "fujin-cli"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "cappa" },
@@ -349,7 +349,7 @@ dependencies = [
     { name = "rich" },
 ]
 
-[package.dev-dependencies]
+[package.dependency-groups]
 dev = [
     { name = "bump-my-version" },
     { name = "django" },
@@ -366,7 +366,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.9.2" },
 ]
 
-[package.metadata.requires-dev]
+[package.metadata.dependency-groups]
 dev = [
     { name = "bump-my-version", specifier = ">=0.27.0" },
     { name = "django", specifier = ">=5.1.2" },

@@ -1,12 +1,15 @@
-from fabric import Connection
+from __future__ import annotations
 
-from fujin.config import Config
+from fujin.connection import Connection
+
+from fujin.config import Config, HostConfig
 
 
 class WebProxy:
-    conn: Connection
-    domain_name: str
-    config: Config
+
+    @classmethod
+    def create(cls, _: Config, __: HostConfig, ___: Connection) -> WebProxy:
+        return cls()
 
     def install(self):
         pass
