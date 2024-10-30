@@ -10,6 +10,7 @@ from .deploy import Deploy
 class Redeploy(AppCommand):
     def __call__(self):
         deploy = Deploy(_host=self._host)
+        deploy.build_app()
         with self.app_environment() as conn:
             hook_manager = self.create_hook_manager(conn)
             hook_manager.pre_deploy()

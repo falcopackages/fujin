@@ -13,10 +13,7 @@ from fujin.connection import Connection
 )
 class Deploy(AppCommand):
     def __call__(self):
-        try:
-            subprocess.run(self.config.build_command, check=True, shell=True)
-        except subprocess.CalledProcessError as e:
-            raise cappa.Exit(f"build command failed: {e}", code=1) from e
+        self.build_app()
 
         with self.connection() as conn:
             conn.run(f"mkdir -p {self.project_dir}")
@@ -38,6 +35,12 @@ class Deploy(AppCommand):
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.host_config.domain_name}[/blue]"
         )
+
+    def build_app(self) -> None:
+        try:
+            subprocess.run(self.config.build_command, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            raise cappa.Exit(f"build command failed: {e}", code=1) from e
 
     @property
     def versioned_assets_dir(self) -> str:
