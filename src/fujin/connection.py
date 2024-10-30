@@ -67,6 +67,9 @@ def host_connection(host_config: HostConfig) -> Connection:
     except (UnexpectedExit, NoValidConnectionsError) as e:
         raise cappa.Exit(str(e), code=1) from e
     except SSHException as e:
-        raise cappa.Exit(f"{e}, are you using the correct user?", code=1) from e
+        raise cappa.Exit(
+            f"{e}, possible causes: incorrect user, or either you or the server may be offline",
+            code=1,
+        ) from e
     finally:
         conn.close()

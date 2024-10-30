@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 
 import cappa
+
 from fujin.commands import AppCommand
 from fujin.connection import Connection
 
@@ -38,19 +39,25 @@ class Deploy(AppCommand):
             f"[blue]Access the deployed project at: https://{self.host_config.domain_name}[/blue]"
         )
 
+    @property
+    def versioned_assets_dir(self) -> str:
+        return f"{self.project_dir}/v{self.config.version}"
+
     def transfer_files(self, conn: Connection):
         if not self.host_config.envfile.exists():
             raise cappa.Exit(f"{self.host_config.envfile} not found", code=1)
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        conn.put(
-            str(self.config.requirements), f"{self.project_dir}/requirements.txt"
-        )  # TODO: should probably mark requirements with version
         conn.put(str(self.host_config.envfile), f"{self.project_dir}/.env")
+        conn.run(f"mkdir -p {self.versioned_assets_dir}")
+        conn.put(
+            str(self.config.requirements),
+            f"{self.versioned_assets_dir}/requirements.txt",
+        )
         conn.put(
             str(self.config.distfile),
-            f"{self.project_dir}/{self.config.distfile.name}",
+            f"{self.versioned_assets_dir}/{self.config.distfile.name}",
         )
         appenv = f"""
 source .env
@@ -64,8 +71,8 @@ export PATH=".venv/bin:$PATH"
         if self.config.skip_project_install:
             return
         conn.run("uv venv")
-        conn.run("uv pip install -r requirements.txt")
-        conn.run(f"uv pip install {self.config.distfile.name}")
+        conn.run(f"uv pip install -r v{self.config.version}/requirements.txt")
+        conn.run(f"uv pip install v{self.config.version}/{self.config.distfile.name}")
 
     def release(self, conn: Connection):
         if self.config.release_command:
