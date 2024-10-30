@@ -13,8 +13,7 @@ from fujin.connection import Connection
 class Deploy(AppCommand):
     def __call__(self):
         try:
-            # TODO, don't bother running the build process if the distfile already exist, move this to the app command
-            subprocess.run(self.config.build_command.split(), check=True)
+            subprocess.run(self.config.build_command, check=True, shell=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
 

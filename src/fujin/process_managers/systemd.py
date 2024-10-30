@@ -60,7 +60,7 @@ class ProcessManager:
         for name in self.service_names:
             # the main web service is launched by the socket service
             if name != f"{self.app_name}.service":
-                self.conn.run_sudo(f"sudo systemctl enable {name}")
+                self.run_pty(f"sudo systemctl enable {name}")
 
     def get_configuration_files(self) -> list[SystemdFile]:
         templates_folder = (
