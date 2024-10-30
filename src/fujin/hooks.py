@@ -34,7 +34,7 @@ class HookManager:
         if hooks := self.hooks.get(type_):
             for name, command in hooks.items():
                 rich_print(f"[blue]Running {type_} hook {name} [/blue]")
-                self.conn.run(command)
+                self.conn.run(command, pty=True)
 
     def pre_deploy(self) -> None:
         self._run_hook(Hook.PRE_DEPLOY)
