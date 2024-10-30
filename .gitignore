@@ -149,3 +149,4 @@ dmypy.json
 id_rsa
 id_rsa.pub
 aws.pem
+.vagrant
