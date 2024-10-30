@@ -13,7 +13,7 @@ from fujin.connection import Connection
 class Deploy(AppCommand):
     def __call__(self):
         try:
-            # TODO, don't bother running the build process if the distfile already exist
+            # TODO, don't bother running the build process if the distfile already exist, move this to the app command
             subprocess.run(self.config.build_command.split(), check=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
@@ -45,19 +45,21 @@ class Deploy(AppCommand):
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        conn.put(str(self.config.requirements), f"{self.project_dir}/requirements.txt")
+        conn.put(
+            str(self.config.requirements), f"{self.project_dir}/requirements.txt"
+        )  # TODO: should probably mark requirements with version
         conn.put(str(self.host_config.envfile), f"{self.project_dir}/.env")
         conn.put(
             str(self.config.distfile),
             f"{self.project_dir}/{self.config.distfile.name}",
         )
-        envrun = f"""
+        appenv = f"""
 source .env
 export UV_COMPILE_BYTECODE=1
 export UV_PYTHON=python{self.config.python_version}
 export PATH=".venv/bin:$PATH"
 """
-        conn.run(f"echo '{envrun.strip()}' > envrun")
+        conn.run(f"echo '{appenv.strip()}' > .appenv")
 
     def install_project(self, conn: Connection):
         if self.config.skip_project_install:

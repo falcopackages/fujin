@@ -69,7 +69,7 @@ class AppCommand(BaseCommand):
     def app_environment(self) -> Connection:
         with self.connection() as conn:
             with conn.cd(self.project_dir):
-                with conn.prefix("source envrun"):
+                with conn.prefix("source .appenv"):
                     yield conn
 
     @cached_property
