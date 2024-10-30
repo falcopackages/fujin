@@ -46,7 +46,7 @@ fujin *ARGS:
     uvx mypy .
 
 @docs-serve:
-    uv run --group docs sphinx-autobuild docs docs/_build/html --port 8002
+    uv run --group docs sphinx-autobuild docs docs/_build/html --port 8002 --watch src/fujin
 
 @docs-requirements:
     uv --group docs pip compile pyproject.toml -o requirements.txt

@@ -5,12 +5,13 @@ from typing import Annotated
 
 import cappa
 import tomli_w
-from fujin.commands import BaseCommand
-from fujin.config import tomllib
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
+
+import fujin.config
+from fujin.commands import BaseCommand
+from fujin.config import tomllib
 
 
 @cappa.command(name="config", help="Manage application configuration")
@@ -20,7 +21,7 @@ class ConfigCMD(BaseCommand):
         console = Console()
 
         general_config = {
-            "app": self.config.app,
+            "app_name": self.config.app_name,
             "app_bin": self.config.app_bin,
             "version": self.config.version,
             "python_version": self.config.python_version,
@@ -99,7 +100,8 @@ class ConfigCMD(BaseCommand):
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
         profile_to_func = {"simple": simple_config, "falco": falco_config}
-        config = profile_to_func[profile]()
+        app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+        config = profile_to_func[profile](app_name)
         fujin_toml.write_text(tomli_w.dumps(config))
         self.stdout.output(
             "[green]Sample configuration file generated successfully![/green]"
@@ -107,12 +109,14 @@ class ConfigCMD(BaseCommand):
 
     @cappa.command(help="Config documentation")
     def docs(self):
-        self.stdout.output(Markdown(docs))
+        docs = f"""
+        # Fujin Configuration
+        {fujin.config.__doc__}
+        """
+        self.stdout.output(docs)
 
 
-def simple_config() -> dict:
-    app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
-
+def simple_config(app_name: str) -> dict:
     config = {
         "app_name": app_name,
         "version": "0.1.0",
@@ -149,8 +153,8 @@ def simple_config() -> dict:
     return config
 
 
-def falco_config() -> dict:
-    config = simple_config()
+def falco_config(app_name: str) -> dict:
+    config = simple_config(app_name)
     config.update(
         {
             "hooks": {"pre_deploy": f".venv/bin/{config['app']} setup"},
@@ -167,8 +171,3 @@ def falco_config() -> dict:
         }
     )
     return config
-
-
-docs = """
-# Fujin Configuration
-"""

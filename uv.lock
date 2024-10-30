@@ -57,6 +57,18 @@ wheels = [
 ]
 
 [[package]]
+name = "astroid"
+version = "3.3.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/1e/326fb1d3d83a3bb77c9f9be29d31f2901e35acb94b0605c3f2e5085047f9/astroid-3.3.5.tar.gz", hash = "sha256:5cfc40ae9f68311075d27ef68a4841bdc5cc7f6cf86671b49f00607d30188e2d", size = 397229 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/41/30/624365383fa4a40329c0f0bbbc151abc4a64e30dfc110fc8f6e2afcd02bb/astroid-3.3.5-py3-none-any.whl", hash = "sha256:a9d1c946ada25098d790e079ba2a1b112157278f3fb7e718ae6a9252f5835dc8", size = 274586 },
+]
+
+[[package]]
 name = "babel"
 version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -103,10 +115,14 @@ version = "0.1.0"
 source = { editable = "examples/django/bookstore" }
 dependencies = [
     { name = "django" },
+    { name = "gunicorn" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "django", specifier = ">=5.1.2" }]
+requires-dist = [
+    { name = "django", specifier = ">=5.1.2" },
+    { name = "gunicorn", specifier = ">=23.0.0" },
+]
 
 [[package]]
 name = "bracex"
@@ -375,6 +391,33 @@ wheels = [
 ]
 
 [[package]]
+name = "django-stubs-ext"
+version = "5.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/62/a7129909d3c94eac957c02eeb05ac57cbca81db4f3f6270a8503697f376a/django_stubs_ext-5.1.1.tar.gz", hash = "sha256:db7364e4f50ae7e5360993dbd58a3a57ea4b2e7e5bab0fbd525ccdb3e7975d1c", size = 9455 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/ed/f79ae5ad993bdf900d61892d2a9fc0145441a507a7579890fb8e21e4a7bc/django_stubs_ext-5.1.1-py3-none-any.whl", hash = "sha256:3907f99e178c93323e2ce908aef8352adb8c047605161f8d9e5e7b4efb5a6a9c", size = 8965 },
+]
+
+[[package]]
+name = "django-tasks"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-stubs-ext" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/7c/d67dee8c44f2f01b72ed918ed07f1bdd0594b834d82eae15493ca99f01ec/django_tasks-0.5.0.tar.gz", hash = "sha256:db9f9f333e5a6dfe791fcfe6d4b72d268dcfb01b596393c4ef487e79a94beb8a", size = 26239 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/7a/836d805dc0a6f5493e8301e9e4e6e8bb8558e64e0c7ff0e051dd978a4923/django_tasks-0.5.0-py3-none-any.whl", hash = "sha256:0f7e6d24cf12b2c89efd03c6fc50e091eea1eaa0c15bbfbc7da3128d52199ffd", size = 33658 },
+]
+
+[[package]]
 name = "docutils"
 version = "0.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -440,6 +483,7 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "cappa" },
+    { name = "django-tasks" },
     { name = "fabric" },
     { name = "msgspec", extra = ["toml"] },
     { name = "rich" },
@@ -457,13 +501,15 @@ docs = [
     { name = "myst-parser" },
     { name = "shibuya" },
     { name = "sphinx-autobuild" },
+    { name = "sphinx-autodoc2" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cappa", specifier = ">=0.24.0" },
+    { name = "cappa", specifier = ">=0.24" },
+    { name = "django-tasks", specifier = ">=0.5.0" },
     { name = "fabric", specifier = ">=3.2.2" },
     { name = "msgspec", extras = ["toml"], specifier = ">=0.18.6" },
     { name = "rich", specifier = ">=13.9.2" },
@@ -481,6 +527,7 @@ docs = [
     { name = "myst-parser" },
     { name = "shibuya" },
     { name = "sphinx-autobuild" },
+    { name = "sphinx-autodoc2", specifier = ">=0.5.0" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
 ]
@@ -500,6 +547,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/14/d4/8ca20b1a28119aa4ff85553102334054056d3f4e754259c384c1406e9280/git_cliff-2.6.1-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:f18d6c485f7198fe4e430fc059488d033ea9ccca122427c7647617ae1d3f4d33", size = 7065947 },
     { url = "https://files.pythonhosted.org/packages/e8/09/35237627f7f731324c7bfc77cfef11c4bd85b1c23d30d796926f7fea4b4f/git_cliff-2.6.1-py3-none-win32.whl", hash = "sha256:f5b943b071bfdbdf1027ba0da529590305ec1be018d4236f0bacf5cf31e60b86", size = 6164541 },
     { url = "https://files.pythonhosted.org/packages/a5/00/432b89766f1b3172a569b70d7f873b2d7c41e43e293b86d3ac75f0126d7d/git_cliff-2.6.1-py3-none-win_amd64.whl", hash = "sha256:59fb3f42b51eb23cf32686f5bb72f4d82b63e28c09c41db8706c9cfee3e9fab6", size = 6878759 },
+]
+
+[[package]]
+name = "gunicorn"
+version = "23.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/34/72/9614c465dc206155d93eff0ca20d42e1e35afc533971379482de953521a4/gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec", size = 375031 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/7d/6dac2a6e1eba33ee43f318edbed4ff29151a49b5d37f080aad1e6469bca4/gunicorn-23.0.0-py3-none-any.whl", hash = "sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d", size = 85029 },
 ]
 
 [[package]]
@@ -1198,6 +1257,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a5/2c/155e1de2c1ba96a72e5dba152c509a8b41e047ee5c2def9e9f0d812f8be7/sphinx_autobuild-2024.10.3.tar.gz", hash = "sha256:248150f8f333e825107b6d4b86113ab28fa51750e5f9ae63b59dc339be951fb1", size = 14023 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/18/c0/eba125db38c84d3c74717008fd3cb5000b68cd7e2cbafd1349c6a38c3d3b/sphinx_autobuild-2024.10.3-py3-none-any.whl", hash = "sha256:158e16c36f9d633e613c9aaf81c19b0fc458ca78b112533b20dafcda430d60fa", size = 11908 },
+]
+
+[[package]]
+name = "sphinx-autodoc2"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "astroid" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/5f/5350046d1aa1a56b063ae08b9ad871025335c9d55fe2372896ea48711da9/sphinx_autodoc2-0.5.0.tar.gz", hash = "sha256:7d76044aa81d6af74447080182b6868c7eb066874edc835e8ddf810735b6565a", size = 115077 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/e6/48d47961bbdae755ba9c17dfc65d89356312c67668dcb36c87cfadfa1964/sphinx_autodoc2-0.5.0-py3-none-any.whl", hash = "sha256:e867013b1512f9d6d7e6f6799f8b537d6884462acd118ef361f3f619a60b5c9e", size = 43385 },
 ]
 
 [[package]]

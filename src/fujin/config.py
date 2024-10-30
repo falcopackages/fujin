@@ -1,3 +1,24 @@
+"""
+Fujin uses a ``fujin.toml`` file at the root of your project for configuration. Below are all available configuration options.
+
+Application
+-----------
+
+Web Proxy
+---------
+
+Hosts
+-----
+
+Aliases
+-------
+
+hooks
+-----
+
+
+"""
+
 from __future__ import annotations
 
 import os
@@ -36,6 +57,10 @@ class Config(msgspec.Struct, kw_only=True):
     def __post_init__(self):
         self.app_bin = self.app_bin.format(app_name=self.app_name)
         self._distfile = self._distfile.format(version=self.version)
+
+        if len(self.hosts) == 1:
+            host = next(iter(self.hosts.values()))
+            host.default = True
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
             raise ValueError(

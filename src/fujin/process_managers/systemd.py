@@ -8,6 +8,8 @@ from fujin.config import Config
 from fujin.config import HostConfig
 from fujin.connection import Connection
 
+# TAKE inspiration https://codeberg.org/alimiracle/pysystemd/src/branch/master/pysystemd/systemd.py
+
 
 @dataclass(frozen=True, slots=True)
 class SystemdFile:
@@ -46,6 +48,7 @@ class ProcessManager:
         return self.conn.run(*args, **kwargs, pty=True)
 
     def install_services(self) -> None:
+        # TODO: based on if the connection mode is tcp or socket, generate or not a socket file file, ruse type simple instead of notify when using tcp
         conf_files = self.get_configuration_files()
         for conf_file in conf_files:
             self.run_pty(

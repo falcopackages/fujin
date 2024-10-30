@@ -1,15 +1,13 @@
 app_name = "bookstore"
-#version = "0.1.0" infer from the pyproject.toml file
 requirements = "requirements.txt"
 python_version = "3.13"
 build_command = "uv build"
 release_command = "bookstore migrate"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
-webserver = { upstream = "localhost:8000" } # or "unix:/run/bookstore.sock"
+webserver = { upstream = "unix//run/bookstore.sock" } # or "localhost:8000"
 
 [hooks.post_deploy]
 pip_list = "uv pip list"
-migrate = "bookstore migrate" # useless just so show the example
 
 [aliases]
 console = "app exec -i shell"
@@ -17,15 +15,22 @@ dbshell = "app exec -i dbshell"
 shell = "server exec -i bash"
 
 [processes]
-web = ".venv/bin/bookstore runserver"
-#worker = ".venv/bin/bookstore qcluster"
+web = ".venv/bin/gunicorn bookstore.wsgi:application"
+worker = ".venv/bin/bookstore db_worker"
 
-[hosts.primary]
+[hosts.vagrant]
 default = true
 ip = "127.0.0.1"
-domain_name = "mybookstore.com"
+domain_name = "bookstore.localhost.dev"
 envfile = ".env.prod"
-user = "jean"
-password_env = "PASS"
+user = "vagrant"
 key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
 ssh_port = 2222
+
+[hosts.aws]
+ip = "aws-ec2"
+domain_name = "test.oluwatobi.dev"
+envfile = ".env.prod"
+user = "ubuntu"
+key_filename = "../../../aws.pem"
+

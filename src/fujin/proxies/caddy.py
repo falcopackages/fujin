@@ -39,11 +39,12 @@ class WebProxy(msgspec.Struct):
         version = get_latest_gh_tag()
         download_url = GH_DOWNL0AD_URL.format(version=version)
         filename = GH_TAR_FILENAME.format(version=version)
-        self.conn.run(f"curl -O -L {download_url}")
-        self.conn.run(f"tar -xzvf {filename}")
-        self.conn.run("sudo mv caddy /usr/bin/", pty=True)
-        self.conn.run(f"rm {filename}")
-        self.conn.run("rm LICENSE && rm README.md")
+        with self.conn.cd("/tmp"):
+            self.conn.run(f"curl -O -L {download_url}")
+            self.conn.run(f"tar -xzvf {filename}")
+            self.conn.run("sudo mv caddy /usr/bin/", pty=True)
+            self.conn.run(f"rm {filename}")
+            self.conn.run("rm LICENSE && rm README.md")
         self.conn.run("sudo groupadd --force --system caddy", pty=True)
         self.conn.run(
             "sudo useradd --system --gid caddy --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin --comment 'Caddy web server' caddy",
