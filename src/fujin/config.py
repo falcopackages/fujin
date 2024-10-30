@@ -93,14 +93,14 @@ class HostConfig(msgspec.Struct, kw_only=True):
     domain_name: str
     user: str
     _envfile: str = msgspec.field(name="envfile")
-    projects_dir: str = "/home/{user}/.local/share/fujin"
+    projects_dir: str = ".local/share/fujin"
     password_env: str | None = None
     ssh_port: int = 22
     _key_filename: str | None = msgspec.field(name="key_filename", default=None)
     default: bool = False
 
     def __post_init__(self):
-        self.projects_dir = self.projects_dir.format(user=self.user)
+        self.projects_dir = f"/home/{self.user}/{self.projects_dir}"
 
     def to_dict(self):
         return {f: getattr(self, f) for f in self.__struct_fields__}
