@@ -1,4 +1,4 @@
-app_name = "bookstore"
+app = "bookstore"
 requirements = "requirements.txt"
 python_version = "3.13"
 build_command = "uv build && uv pip compile pyproject.toml -o requirements.txt"
@@ -11,11 +11,11 @@ pip_list = "uv pip list"
 
 [aliases]
 console = "app exec -i shell"
-dbshell = "app exec -i dbshell"
-shell = "server exec -i bash"
+dbconsole = "app exec -i dbshell"
+shell = "server exec --appenv -i bash"
 
 [processes]
-web = ".venv/bin/gunicorn bookstore.wsgi:application"
+web = ".venv/bin/gunicorn bookstore.wsgi:application --access-logfile - --error-logfile -"
 worker = ".venv/bin/bookstore db_worker"
 
 [hosts.vagrant]

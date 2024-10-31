@@ -126,11 +126,11 @@ def simple_config(app_name: str) -> dict:
             "upstream": "localhost:8000",
             "type": "fujin.proxies.caddy",
         },
-        "hooks": {"pre_deploy": f".venv/bin/{app_name} migrate"},
+        "release_command": f"{app_name} migrate",
         "processes": {
             "web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"
         },
-        "aliases": {"shell": "server exec -i bash"},
+        "aliases": {"shell": "server exec --appenv -i bash"},
         "hosts": {
             "primary": {
                 "ip": "127.0.0.1",
@@ -157,7 +157,7 @@ def falco_config(app_name: str) -> dict:
     config = simple_config(app_name)
     config.update(
         {
-            "hooks": {"pre_deploy": f".venv/bin/{config['app']} setup"},
+            "release_command": f"{config['app']} setup",
             "processes": {
                 "web": f".venv/bin/{config['app']} prodserver",
                 "worker": f".venv/bin/{config['app']} qcluster",
@@ -166,7 +166,7 @@ def falco_config(app_name: str) -> dict:
                 "console": "app exec -i shell_plus",
                 "dbconsole": "app exec -i dbshell",
                 "print_settings": "app exec print_settings --format=pprint",
-                "shell": "server exec -i bash",
+                "shell": "server exec --appenv -i bash",
             },
         }
     )

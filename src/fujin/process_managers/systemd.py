@@ -119,7 +119,7 @@ class ProcessManager:
 
     def service_logs(self, name: str, follow: bool = False):
         # TODO: add more options here
-        self.run_pty(f"sudo journalctl -u {name} -r {'-f' if follow else ''}")
+        self.run_pty(f"sudo journalctl -u {name} {'-f' if follow else ''}", warn=True)
 
     def reload_configuration(self) -> None:
         self.run_pty(f"sudo systemctl daemon-reload")
