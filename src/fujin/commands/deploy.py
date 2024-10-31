@@ -63,7 +63,9 @@ class Deploy(AppCommand):
             f"{self.versioned_assets_dir}/{self.config.distfile.name}",
         )
         appenv = f"""
+set -a  # Automatically export all variables
 source .env
+set +a  # Stop automatic export
 export UV_COMPILE_BYTECODE=1
 export UV_PYTHON=python{self.config.python_version}
 export PATH=".venv/bin:$PATH"
