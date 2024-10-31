@@ -20,12 +20,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx_design",
     "sphinx_copybutton",
-    "autodoc2",
     "jupyter_sphinx",
-]
-suppress_warnings = [
-    # "autodoc2.*",  # suppress all
-    "autodoc2.config_error",  # suppress specific
 ]
 
 templates_path = ["_templates"]
