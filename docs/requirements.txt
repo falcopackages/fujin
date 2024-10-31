@@ -2,4 +2,5 @@ myst-parser
 shibuya
 sphinx-copybutton
 sphinx-design
+jupyter-sphinx
 .

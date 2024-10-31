@@ -57,8 +57,8 @@ class AppCommand(BaseCommand):
         return host_config
 
     @cached_property
-    def project_dir(self) -> str:
-        return self.host_config.project_dir(app_name=self.config.app_name)
+    def app_dir(self) -> str:
+        return self.host_config.get_app_dir(app_name=self.config.app_name)
 
     @contextmanager
     def connection(self):
@@ -68,7 +68,7 @@ class AppCommand(BaseCommand):
     @contextmanager
     def app_environment(self) -> Connection:
         with self.connection() as conn:
-            with conn.cd(self.project_dir):
+            with conn.cd(self.app_dir):
                 with conn.prefix("source .appenv"):
                     yield conn
 

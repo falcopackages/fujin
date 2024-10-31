@@ -16,8 +16,8 @@ class Deploy(AppCommand):
         self.build_app()
 
         with self.connection() as conn:
-            conn.run(f"mkdir -p {self.project_dir}")
-            with conn.cd(self.project_dir):
+            conn.run(f"mkdir -p {self.app_dir}")
+            with conn.cd(self.app_dir):
                 self.create_hook_manager(conn).pre_deploy()
                 self.transfer_files(conn)
 
@@ -44,7 +44,7 @@ class Deploy(AppCommand):
 
     @property
     def versioned_assets_dir(self) -> str:
-        return f"{self.project_dir}/v{self.config.version}"
+        return f"{self.app_dir}/v{self.config.version}"
 
     def transfer_files(self, conn: Connection):
         if not self.host_config.envfile.exists():
@@ -52,7 +52,7 @@ class Deploy(AppCommand):
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        conn.put(str(self.host_config.envfile), f"{self.project_dir}/.env")
+        conn.put(str(self.host_config.envfile), f"{self.app_dir}/.env")
         conn.run(f"mkdir -p {self.versioned_assets_dir}")
         conn.put(
             str(self.config.requirements),

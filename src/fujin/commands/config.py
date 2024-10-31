@@ -64,7 +64,7 @@ class ConfigCMD(BaseCommand):
                 host_dict["domain_name"],
                 host_dict["user"],
                 str(host_dict["password_env"] or "N/A"),
-                host_dict["projects_dir"],
+                host_dict["apps_dir"],
                 str(host_dict["ssh_port"]),
                 str(host_dict["_key_filename"] or "N/A"),
                 host_dict["_envfile"],
@@ -118,9 +118,9 @@ class ConfigCMD(BaseCommand):
 
 def simple_config(app_name: str) -> dict:
     config = {
-        "app_name": app_name,
+        "app": app_name,
         "version": "0.1.0",
-        "build_command": "uv build",
+        "build_command": "uv build && uv pip compile pyproject.toml -o requirements.txt",
         "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
         "webserver": {
             "upstream": "localhost:8000",
@@ -137,7 +137,6 @@ def simple_config(app_name: str) -> dict:
                 "user": "root",
                 "domain_name": f"{app_name}.com",
                 "envfile": ".env.prod",
-                "default": True,
             }
         },
     }

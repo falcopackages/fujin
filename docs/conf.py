@@ -21,6 +21,7 @@ extensions = [
     "sphinx_design",
     "sphinx_copybutton",
     "autodoc2",
+    "jupyter_sphinx",
 ]
 suppress_warnings = [
     # "autodoc2.*",  # suppress all

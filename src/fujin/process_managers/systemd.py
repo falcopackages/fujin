@@ -22,7 +22,7 @@ class ProcessManager:
     conn: Connection
     app_name: str
     processes: dict[str, str]
-    project_dir: str
+    app_dir: str
     user: str
 
     @classmethod
@@ -30,7 +30,7 @@ class ProcessManager:
         return cls(
             processes=config.processes,
             app_name=config.app_name,
-            project_dir=host_config.project_dir(config.app_name),
+            app_dir=host_config.get_app_dir(config.app_name),
             conn=conn,
             user=host_config.user,
         )
@@ -72,7 +72,7 @@ class ProcessManager:
         context = {
             "app_name": self.app_name,
             "user": self.user,
-            "project_dir": self.project_dir,
+            "app_dir": self.app_dir,
         }
 
         files = []

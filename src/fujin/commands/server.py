@@ -47,17 +47,17 @@ class Server(AppCommand):
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
     def exec(
-            self,
-            command: str,
-            interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
-            appenv: Annotated[
-                bool,
-                cappa.Arg(
-                    default=False,
-                    long="--appenv",
-                    help="Change to app directory and enable app environment",
-                ),
-            ],
+        self,
+        command: str,
+        interactive: Annotated[bool, cappa.Arg(default=False, short="-i")],
+        appenv: Annotated[
+            bool,
+            cappa.Arg(
+                default=False,
+                long="--appenv",
+                help="Change to app directory and enable app environment",
+            ),
+        ],
     ):
         context = self.app_environment() if appenv else self.connection()
         with context as conn:
@@ -70,9 +70,9 @@ class Server(AppCommand):
         name="create-user", help="Create a new user with sudo and ssh access"
     )
     def create_user(
-            self,
-            name: str,
-            with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
+        self,
+        name: str,
+        with_password: Annotated[bool, cappa.Arg(long="--with-password")] = False,
     ):
         with self.connection() as conn:
             run_pty = partial(conn.run, pty=True)

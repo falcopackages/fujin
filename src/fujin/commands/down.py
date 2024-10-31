@@ -24,7 +24,7 @@ class Down(AppCommand):
             hook_manager = self.create_hook_manager(conn)
             hook_manager.pre_teardown()
             process_manager = self.create_process_manager(conn)
-            conn.run(f"rm -rf {self.project_dir}")
+            conn.run(f"rm -rf {self.app_dir}")
             self.create_web_proxy(conn).teardown()
             process_manager.uninstall_services()
             process_manager.reload_configuration()
