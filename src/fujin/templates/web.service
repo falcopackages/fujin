@@ -6,8 +6,8 @@ Requires={app_name}.socket
 After=network.target
 
 [Service]
-Type=notify
-NotifyAccess=main
+#Type=notify
+#NotifyAccess=main
 User={user}
 Group={user}
 RuntimeDirectory={app_name}
