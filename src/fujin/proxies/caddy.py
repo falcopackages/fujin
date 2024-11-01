@@ -72,7 +72,6 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo rm /usr/bin/caddy")
         self.run_pty("sudo rm /etc/systemd/system/caddy-api.service")
         self.run_pty("sudo userdel caddy")
-        self.run_pty("sudo groupdel caddy")
 
     def setup(self):
         config = (

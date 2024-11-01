@@ -102,12 +102,12 @@ class ProcessManager:
 
     def uninstall_services(self) -> None:
         self.stop_services()
-        self.conn.run(f"sudo systemctl disable {self.app_name}.socket")
+        if self.is_using_unix_socket:
+            self.run_pty(f"sudo systemctl disable {self.app_name}.socket")
+            self.run_pty(f"sudo rm /etc/systemd/system/{self.app_name}.socket")
         for name in self.service_names:
-            # was never enabled in the first place, look at the code above
-            if name != f"{self.app_name}.service":
-                self.run_pty(f"sudo systemctl disable {name}")
-        # TODO should delete the service files
+            self.run_pty(f"sudo systemctl disable {name}", warn=True)
+            self.run_pty(f"sudo rm /etc/systemd/system/{name}", warn=True)
 
     def start_services(self, *names) -> None:
         names = names or self.service_names
