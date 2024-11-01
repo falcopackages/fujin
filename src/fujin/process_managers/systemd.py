@@ -111,18 +111,24 @@ class ProcessManager:
 
     def start_services(self, *names) -> None:
         names = names or self.service_names
+        if self.is_using_unix_socket:
+            self.run_pty(f"sudo systemctl start {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl start {name}")
 
     def restart_services(self, *names) -> None:
         names = names or self.service_names
+        if self.is_using_unix_socket:
+            self.run_pty(f"sudo systemctl restart {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl restart {name}")
 
     def stop_services(self, *names) -> None:
         names = names or self.service_names
+        if self.is_using_unix_socket:
+            self.run_pty(f"sudo systemctl stop {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl stop {name}")
