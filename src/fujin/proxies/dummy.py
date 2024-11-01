@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from fujin.config import Config
-from fujin.config import HostConfig
 from fujin.connection import Connection
 
 

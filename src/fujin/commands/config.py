@@ -114,7 +114,7 @@ def simple_config(app_name: str) -> dict:
             "web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
-        "hosts": {
+        "host": {
             "ip": "127.0.0.1",
             "user": "root",
             "domain_name": f"{app_name}.com",

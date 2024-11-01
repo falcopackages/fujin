@@ -11,6 +11,10 @@ fujin documentation
 
    This a work in progress, not ready for use yet.
 
+
+.. .. include:: ../README.md
+   :parser: myst_parser.sphinx_
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

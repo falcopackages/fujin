@@ -10,9 +10,13 @@ Commands
    :caption: Contents:
 
    up
+   app
    server
    deploy
    redeploy
-   app
+   proxy
+   rollback
+   prune
+   secrets
    down
    config

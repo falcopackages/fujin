@@ -27,7 +27,7 @@ class ProcessManager:
             conn=conn,
             user=config.host.user,
             is_using_unix_socket="unix" in config.webserver.upstream
-                                 and config.webserver.type != "fujin.proxies.dummy",
+            and config.webserver.type != "fujin.proxies.dummy",
             local_config_dir=config.local_config_dir,
         )
 
@@ -58,10 +58,10 @@ class ProcessManager:
                 self.run_pty(f"sudo systemctl enable {self.get_service_name(name)}")
 
     def get_configuration_files(
-            self, ignore_local: bool = False
+        self, ignore_local: bool = False
     ) -> list[tuple[str, str]]:
         templates_folder = (
-                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()

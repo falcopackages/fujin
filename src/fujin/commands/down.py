@@ -15,7 +15,14 @@ from fujin.commands import BaseCommand
 @dataclass
 class Down(BaseCommand):
     full: Annotated[
-        bool, cappa.Arg(short="-f", long="--full", help="Stop and uninstall proxy as part of teardown")] = False
+        bool,
+        cappa.Arg(
+            short="-f",
+            long="--full",
+            help="Stop and uninstall proxy as part of teardown",
+        ),
+    ] = False
+
     def __call__(self):
         confirm = Prompt.ask(
             f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
