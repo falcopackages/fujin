@@ -40,7 +40,7 @@ fujin *ARGS:
 @fmt:
     just --fmt --unstable
     uvx ruff format
-    uvx pre-commit run pyproject-fmt
+    uvx pre-commit run -a pyproject-fmt
 
 @lint:
     uvx mypy .

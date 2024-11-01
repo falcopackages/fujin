@@ -20,20 +20,22 @@ class WebProxy(msgspec.Struct):
     domain_name: str
     app_name: str
     upstream: str
+    local_config_dir: Path
 
     @property
     def config_file(self) -> Path:
-        return Path(f".fujin/{self.app_name}.conf")
+        return self.local_config_dir / f"{self.app_name}.conf"
 
     @classmethod
     def create(
-            cls, config: Config, host_config: HostConfig, conn: Connection
+        cls, config: Config, host_config: HostConfig, conn: Connection
     ) -> WebProxy:
         return cls(
             conn=conn,
             domain_name=host_config.domain_name,
             upstream=config.webserver.upstream,
             app_name=config.app_name,
+            local_config_dir=config.local_config_dir,
         )
 
     def install(self):
@@ -48,7 +50,11 @@ class WebProxy(msgspec.Struct):
 
     def setup(self):
         # TODO should not be running all this everytime
-        conf = self.config_file.read_text() if self.config_file.exists() else self._get_config()
+        conf = (
+            self.config_file.read_text()
+            if self.config_file.exists()
+            else self._get_config()
+        )
         self.conn.run(
             f"sudo echo '{conf}' | sudo tee /etc/nginx/sites-available/{self.app_name}.conf",
             hide="out",
@@ -74,20 +80,15 @@ class WebProxy(msgspec.Struct):
     def teardown(self):
         pass
 
-    def start(self) -> None:
-        ...
+    def start(self) -> None: ...
 
-    def stop(self) -> None:
-        ...
+    def stop(self) -> None: ...
 
-    def status(self) -> None:
-        ...
+    def status(self) -> None: ...
 
-    def restart(self) -> None:
-        ...
+    def restart(self) -> None: ...
 
-    def logs(self) -> None:
-        ...
+    def logs(self) -> None: ...
 
     def export_config(self) -> None:
         self.config_file.write_text(self._get_config())

@@ -1,4 +1,5 @@
-# TODO: add tons of comments in this file
+# All options are documented here https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
+# Inspiration was taken from here https://docs.gunicorn.org/en/stable/deploy.html#systemd
 [Unit]
 Description={app_name} daemon
 Requires={app_name}.socket
@@ -8,7 +9,7 @@ After=network.target
 Type=notify
 NotifyAccess=main
 User={user}
-Group=www-data
+Group={user}
 RuntimeDirectory={app_name}
 WorkingDirectory={app_dir}
 ExecStart={app_dir}/{command}
@@ -18,7 +19,7 @@ KillMode=mixed
 TimeoutStopSec=5
 PrivateTmp=true
 # if your app does not need administrative capabilities, let systemd know
-# ProtectSystem=strict
+ProtectSystem=strict
 
 [Install]
 WantedBy=multi-user.target

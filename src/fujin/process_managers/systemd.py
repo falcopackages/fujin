@@ -8,14 +8,6 @@ from fujin.config import Config
 from fujin.config import HostConfig
 from fujin.connection import Connection
 
-# TAKE inspiration https://codeberg.org/alimiracle/pysystemd/src/branch/master/pysystemd/systemd.py
-
-
-@dataclass(frozen=True, slots=True)
-class SystemdFile:
-    name: str
-    body: str
-
 
 @dataclass(frozen=True, slots=True)
 class ProcessManager:
@@ -24,6 +16,8 @@ class ProcessManager:
     processes: dict[str, str]
     app_dir: str
     user: str
+    is_using_unix_socket: bool
+    local_config_dir: Path
 
     @classmethod
     def create(cls, config: Config, host_config: HostConfig, conn: Connection):
@@ -33,6 +27,9 @@ class ProcessManager:
             app_dir=host_config.get_app_dir(config.app_name),
             conn=conn,
             user=host_config.user,
+            is_using_unix_socket="unix" in config.webserver.upstream
+            and config.webserver.type != "fujin.proxies.dummy",
+            local_config_dir=config.local_config_dir,
         )
 
     @property
@@ -48,27 +45,33 @@ class ProcessManager:
         return self.conn.run(*args, **kwargs, pty=True)
 
     def install_services(self) -> None:
-        # TODO: based on if the connection mode is tcp or socket, generate or not a socket file file, ruse type simple instead of notify when using tcp
         conf_files = self.get_configuration_files()
-        for conf_file in conf_files:
+        for filename, content in conf_files:
             self.run_pty(
-                f"echo '{conf_file.body}' | sudo tee /etc/systemd/system/{conf_file.name}",
+                f"echo '{content}' | sudo tee /etc/systemd/system/{filename}",
                 hide="out",
             )
 
-        self.run_pty(f"sudo systemctl enable --now {self.app_name}.socket")
-        for name in self.service_names:
-            # the main web service is launched by the socket service
-            if name != f"{self.app_name}.service":
-                self.run_pty(f"sudo systemctl enable {name}")
+        for name in self.processes:
+            if name == "web" and self.is_using_unix_socket:
+                self.run_pty(f"sudo systemctl enable --now {self.app_name}.socket")
+            else:
+                self.run_pty(f"sudo systemctl enable {self.get_service_name(name)}")
 
-    def get_configuration_files(self) -> list[SystemdFile]:
+    def get_configuration_files(
+        self, ignore_local: bool = False
+    ) -> list[tuple[str, str]]:
         templates_folder = (
             Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()
-        other_service_content = (templates_folder / "other.service").read_text()
+        simple_service_content = (templates_folder / "simple.service").read_text()
+        if not self.is_using_unix_socket:
+            web_service_content = web_service_content.replace(
+                "Requires={app_name}.socket\n", ""
+            )
+
         context = {
             "app_name": self.app_name,
             "user": self.user,
@@ -77,18 +80,25 @@ class ProcessManager:
 
         files = []
         for name, command in self.processes.items():
-            service_name = self.get_service_name(name)
-            if name == "web":
-                body = web_service_content.format(**context, command=command)
-                files.append(
-                    SystemdFile(
-                        name=f"{self.app_name}.socket",
-                        body=web_socket_content.format(**context),
-                    )
-                )
-            else:
-                body = other_service_content.format(**context, command=command)
-            files.append(SystemdFile(name=service_name, body=body))
+            template = web_service_content if name == "web" else simple_service_content
+            name = self.get_service_name(name)
+            local_config = self.local_config_dir / name
+            body = (
+                local_config.read_text()
+                if local_config.exists() and not ignore_local
+                else template.format(**context, command=command)
+            )
+            files.append((name, body))
+        # if using unix then we are sure a web process was defined and the proxy is not dummy
+        if self.is_using_unix_socket:
+            name = f"{self.app_name}.socket"
+            local_config = self.local_config_dir / name
+            body = (
+                local_config.read_text()
+                if local_config.exists() and not ignore_local
+                else web_socket_content.format(**context)
+            )
+            files.append((name, body))
         return files
 
     def uninstall_services(self) -> None:
@@ -98,6 +108,7 @@ class ProcessManager:
             # was never enabled in the first place, look at the code above
             if name != f"{self.app_name}.service":
                 self.run_pty(f"sudo systemctl disable {name}")
+        # TODO should delete the service files
 
     def start_services(self, *names) -> None:
         names = names or self.service_names

@@ -23,7 +23,7 @@ else:
 class Fujin:
     subcommands: cappa.Subcommands[
         Up | Deploy | Redeploy | App | Server | Proxy | ConfigCMD | Down
-        ]
+    ]
 
 
 def main():

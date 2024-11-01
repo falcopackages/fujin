@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import urllib.request
 from pathlib import Path
-from typing import ClassVar
+
 
 import msgspec
 
@@ -14,8 +14,8 @@ from fujin.connection import Connection
 DEFAULT_VERSION = "2.8.4"
 GH_TAR_FILENAME = "caddy_{version}_linux_amd64.tar.gz"
 GH_DOWNL0AD_URL = (
-        "https://github.com/caddyserver/caddy/releases/download/v{version}/"
-        + GH_TAR_FILENAME
+    "https://github.com/caddyserver/caddy/releases/download/v{version}/"
+    + GH_TAR_FILENAME
 )
 GH_RELEASE_LATEST_URL = "https://api.github.com/repos/caddyserver/caddy/releases/latest"
 
@@ -25,17 +25,22 @@ class WebProxy(msgspec.Struct):
     domain_name: str
     app_name: str
     upstream: str
-    config_file: ClassVar[Path] = Path(".fujin/caddy.json")
+    local_config_dir: Path
+
+    @property
+    def config_file(self) -> Path:
+        return self.local_config_dir / "caddy.json"
 
     @classmethod
     def create(
-            cls, config: Config, host_config: HostConfig, conn: Connection
+        cls, config: Config, host_config: HostConfig, conn: Connection
     ) -> WebProxy:
         return cls(
             conn=conn,
             domain_name=host_config.domain_name,
             upstream=config.webserver.upstream,
             app_name=config.app_name,
+            local_config_dir=config.local_config_dir,
         )
 
     def run_pty(self, *args, **kwargs):
@@ -74,7 +79,11 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo groupdel caddy")
 
     def setup(self):
-        config = json.loads(self.config_file.read_text()) if self.config_file.exists() else self._get_config()
+        config = (
+            json.loads(self.config_file.read_text())
+            if self.config_file.exists()
+            else self._get_config()
+        )
         self.conn.run(f"echo '{json.dumps(config)}' > caddy.json")
         self.conn.run(
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"

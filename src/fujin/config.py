@@ -40,13 +40,6 @@ requirements
 Path to your requirements file.
 Default: ``requirements.txt``
 
-process_manager
----------------
-Configures and runs your defined processes. Available options:
-
-- ``fujin.process_managers.systemd`` (default)
-- ``fujin.process_managers.dummy`` (for testing)
-
 Webserver
 ---------
 
@@ -183,6 +176,7 @@ class Config(msgspec.Struct, kw_only=True):
     webserver: Webserver
     _requirements: str = msgspec.field(name="requirements", default="requirements.txt")
     hooks: HooksDict = msgspec.field(default=dict)
+    local_config_dir: Path = Path(".fujin")
 
     def __post_init__(self):
         self.app_bin = self.app_bin.format(app=self.app_name)

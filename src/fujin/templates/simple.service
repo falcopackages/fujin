@@ -1,15 +1,14 @@
+# All options are documented here https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 [Unit]
 Description={app_name} Worker
 
 [Service]
 User={user}
-Group=www-data
+Group={user}
 WorkingDirectory={app_dir}
 ExecStart={app_dir}/{command}
 EnvironmentFile={app_dir}/.env
 Restart=always
-#StandardOutput=append:/var/log/your_project/qcluster.out.log
-#StandardError=append:/var/log/your_project/qcluster.err.log
 
 [Install]
 WantedBy=multi-user.target
