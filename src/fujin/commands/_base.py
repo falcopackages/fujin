@@ -2,11 +2,10 @@ import importlib
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
-from typing import Annotated
 
 import cappa
-from fujin.config import Config, HostConfig
+
+from fujin.config import Config
 from fujin.connection import host_connection, Connection
 from fujin.errors import ImproperlyConfiguredError
 from fujin.hooks import HookManager
@@ -16,6 +15,11 @@ from fujin.proxies import WebProxy
 
 @dataclass
 class BaseCommand:
+    """
+    A command that provides access to the host config and provide a connection to interact with it,
+    including configuring the web proxy and managing systemd services.
+    """
+
     @cached_property
     def config(self) -> Config:
         return Config.read()
@@ -24,46 +28,13 @@ class BaseCommand:
     def stdout(self) -> cappa.Output:
         return cappa.Output()
 
-
-@dataclass
-class AppCommand(BaseCommand):
-    """
-    A command that provides access to the selected host and provide a connection to interact with it,
-    including configuring the web proxy and managing systemd services.
-    """
-
-    _host: Annotated[str | None, cappa.Arg(long="--host", value_name="HOST")]
-
-    @cached_property
-    def host_config(self) -> HostConfig:
-        if not self._host:
-            host_config = next(
-                (hc for hc in self.config.hosts.values() if hc.default), None
-            )
-            if not host_config:
-                raise ImproperlyConfiguredError(
-                    "No default host has been configured, either pass --host or set the default in your fujin.toml file"
-                )
-        else:
-            host_config = next(
-                (
-                    hc
-                    for name, hc in self.config.hosts.items()
-                    if self._host in [name, hc.ip]
-                ),
-                None,
-            )
-        if not host_config:
-            raise cappa.Exit(f"Host {self._host} does not exist", code=1)
-        return host_config
-
     @cached_property
     def app_dir(self) -> str:
-        return self.host_config.get_app_dir(app_name=self.config.app_name)
+        return self.config.host.get_app_dir(app_name=self.config.app_name)
 
     @contextmanager
     def connection(self):
-        with host_connection(host_config=self.host_config) as conn:
+        with host_connection(host=self.config.host) as conn:
             yield conn
 
     @contextmanager
@@ -84,9 +55,7 @@ class AppCommand(BaseCommand):
             ) from e
 
     def create_web_proxy(self, conn: Connection) -> WebProxy:
-        return self.web_proxy_class.create(
-            conn=conn, config=self.config, host_config=self.host_config
-        )
+        return self.web_proxy_class.create(conn=conn, config=self.config)
 
     @cached_property
     def process_manager_class(self) -> type[ProcessManager]:
@@ -99,9 +68,7 @@ class AppCommand(BaseCommand):
             ) from e
 
     def create_process_manager(self, conn: Connection) -> ProcessManager:
-        return self.process_manager_class.create(
-            conn=conn, config=self.config, host_config=self.host_config
-        )
+        return self.process_manager_class.create(conn=conn, config=self.config)
 
     def create_hook_manager(self, conn: Connection) -> HookManager:
         return HookManager(

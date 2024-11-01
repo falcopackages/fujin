@@ -21,57 +21,40 @@ class ConfigCMD(BaseCommand):
         console = Console()
 
         general_config = {
-            "app_name": self.config.app_name,
+            "app": self.config.app_name,
             "app_bin": self.config.app_bin,
             "version": self.config.version,
             "python_version": self.config.python_version,
             "build_command": self.config.build_command,
+            "release_command": self.config.release_command,
             "distfile": self.config.distfile,
             "requirements": self.config.requirements,
             "webserver": f"{{ upstream = '{self.config.webserver.upstream}', type = '{self.config.webserver.type}' }}",
         }
-        formatted_text = "\n".join(
+        general_config_text = "\n".join(
             f"[bold green]{key}:[/bold green] {value}"
             for key, value in general_config.items()
         )
         console.print(
             Panel(
-                formatted_text,
+                general_config_text,
                 title="General Configuration",
                 border_style="green",
                 width=100,
             )
         )
 
-        # Hosts Table with headers and each dictionary on its own line
-        hosts_table = Table(title="Hosts", header_style="bold cyan")
-        hosts_table.add_column("Host", style="dim")
-        hosts_table.add_column("ip")
-        hosts_table.add_column("domain_name")
-        hosts_table.add_column("user")
-        hosts_table.add_column("password_env")
-        hosts_table.add_column("projects_dr")
-        hosts_table.add_column("ssh_port")
-        hosts_table.add_column("key_filename")
-        hosts_table.add_column("envfile")
-        hosts_table.add_column("primary", justify="center")
-
-        for host_name, host in self.config.hosts.items():
-            host_dict = host.to_dict()
-            hosts_table.add_row(
-                host_name,
-                host_dict["ip"],
-                host_dict["domain_name"],
-                host_dict["user"],
-                str(host_dict["password_env"] or "N/A"),
-                host_dict["apps_dir"],
-                str(host_dict["ssh_port"]),
-                str(host_dict["_key_filename"] or "N/A"),
-                host_dict["_envfile"],
-                "[green]Yes[/green]" if host_dict["default"] else "[red]No[/red]",
+        host_config_text = "\n".join(
+            f"[dim]{key}:[/dim] {value}"
+            for key, value in self.config.host.to_dict().items()
+        )
+        console.print(
+            Panel(
+                host_config_text,
+                title="Host Configuration",
+                width=100,
             )
-
-        console.print(hosts_table)
+        )
 
         # Processes Table with headers and each dictionary on its own line
         processes_table = Table(title="Processes", header_style="bold cyan")
@@ -132,12 +115,10 @@ def simple_config(app_name: str) -> dict:
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
         "hosts": {
-            "primary": {
-                "ip": "127.0.0.1",
-                "user": "root",
-                "domain_name": f"{app_name}.com",
-                "envfile": ".env.prod",
-            }
+            "ip": "127.0.0.1",
+            "user": "root",
+            "domain_name": f"{app_name}.com",
+            "envfile": ".env.prod",
         },
     }
     if not Path(".python-version").exists():

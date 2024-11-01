@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import cappa
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 
 from .deploy import Deploy
 
 
 @cappa.command(help="Redeploy the application to apply code and environment changes")
-class Redeploy(AppCommand):
+class Redeploy(BaseCommand):
     def __call__(self):
-        deploy = Deploy(_host=self._host)
+        deploy = Deploy()
         deploy.build_app()
         with self.app_environment() as conn:
             hook_manager = self.create_hook_manager(conn)

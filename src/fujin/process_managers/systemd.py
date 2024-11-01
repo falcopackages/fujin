@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fujin.config import Config
-from fujin.config import HostConfig
 from fujin.connection import Connection
 
 
@@ -20,15 +19,15 @@ class ProcessManager:
     local_config_dir: Path
 
     @classmethod
-    def create(cls, config: Config, host_config: HostConfig, conn: Connection):
+    def create(cls, config: Config, conn: Connection):
         return cls(
             processes=config.processes,
             app_name=config.app_name,
-            app_dir=host_config.get_app_dir(config.app_name),
+            app_dir=config.host.get_app_dir(config.app_name),
             conn=conn,
-            user=host_config.user,
+            user=config.host.user,
             is_using_unix_socket="unix" in config.webserver.upstream
-            and config.webserver.type != "fujin.proxies.dummy",
+                                 and config.webserver.type != "fujin.proxies.dummy",
             local_config_dir=config.local_config_dir,
         )
 
@@ -59,10 +58,10 @@ class ProcessManager:
                 self.run_pty(f"sudo systemctl enable {self.get_service_name(name)}")
 
     def get_configuration_files(
-        self, ignore_local: bool = False
+            self, ignore_local: bool = False
     ) -> list[tuple[str, str]]:
         templates_folder = (
-            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
         web_service_content = (templates_folder / "web.service").read_text()
         web_socket_content = (templates_folder / "web.socket").read_text()

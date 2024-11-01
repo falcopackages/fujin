@@ -12,9 +12,7 @@ class WebProxy(Protocol):
     config_file: Path
 
     @classmethod
-    def create(
-        cls, config: Config, host_config: HostConfig, conn: Connection
-    ) -> WebProxy: ...
+    def create(cls, config: Config, conn: Connection) -> WebProxy: ...
 
     def install(self) -> None: ...
 

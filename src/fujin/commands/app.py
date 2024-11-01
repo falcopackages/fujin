@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Annotated
 
 import cappa
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 
 
 @cappa.command(help="Run application-related tasks")
-class App(AppCommand):
+class App(BaseCommand):
     @cappa.command(help="Display information about the application")
     def info(self):
         # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped

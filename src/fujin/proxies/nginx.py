@@ -6,7 +6,6 @@ from pathlib import Path
 import msgspec
 
 from fujin.config import Config
-from fujin.config import HostConfig
 from fujin.connection import Connection
 
 CERTBOT_EMAIL = os.getenv("CERTBOT_EMAIL")
@@ -27,12 +26,10 @@ class WebProxy(msgspec.Struct):
         return self.local_config_dir / f"{self.app_name}.conf"
 
     @classmethod
-    def create(
-        cls, config: Config, host_config: HostConfig, conn: Connection
-    ) -> WebProxy:
+    def create(cls, config: Config, conn: Connection) -> WebProxy:
         return cls(
             conn=conn,
-            domain_name=host_config.domain_name,
+            domain_name=config.host.domain_name,
             upstream=config.webserver.upstream,
             app_name=config.app_name,
             local_config_dir=config.local_config_dir,

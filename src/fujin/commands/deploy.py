@@ -4,14 +4,14 @@ import subprocess
 
 import cappa
 
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 from fujin.connection import Connection
 
 
 @cappa.command(
     help="Deploy the project by building, transferring files, installing, and configuring services"
 )
-class Deploy(AppCommand):
+class Deploy(BaseCommand):
     def __call__(self):
         self.build_app()
 
@@ -33,7 +33,7 @@ class Deploy(AppCommand):
             self.create_hook_manager(conn).post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
-            f"[blue]Access the deployed project at: https://{self.host_config.domain_name}[/blue]"
+            f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
         )
 
     def build_app(self) -> None:
@@ -47,12 +47,12 @@ class Deploy(AppCommand):
         return f"{self.app_dir}/v{self.config.version}"
 
     def transfer_files(self, conn: Connection):
-        if not self.host_config.envfile.exists():
-            raise cappa.Exit(f"{self.host_config.envfile} not found", code=1)
+        if not self.config.host.envfile.exists():
+            raise cappa.Exit(f"{self.config.host.envfile} not found", code=1)
 
         if not self.config.requirements.exists():
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-        conn.put(str(self.host_config.envfile), f"{self.app_dir}/.env")
+        conn.put(str(self.config.host.envfile), f"{self.app_dir}/.env")
         conn.run(f"mkdir -p {self.versioned_assets_dir}")
         conn.put(
             str(self.config.requirements),

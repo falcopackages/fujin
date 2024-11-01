@@ -18,16 +18,15 @@ shell = "server exec --appenv -i bash"
 web = ".venv/bin/gunicorn bookstore.wsgi:application --access-logfile - --error-logfile -"
 worker = ".venv/bin/bookstore db_worker"
 
-[hosts.vagrant]
-default = true
-ip = "127.0.0.1"
-domain_name = "bookstore.localhost.dev"
-envfile = ".env.prod"
-user = "vagrant"
-key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
-ssh_port = 2222
+#[host]
+#ip = "127.0.0.1"
+#domain_name = "bookstore.localhost.dev"
+#envfile = ".env.prod"
+#user = "vagrant"
+#key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
+#ssh_port = 2222
 
-[hosts.aws]
+[host]
 ip = "aws-ec2"
 domain_name = "test.oluwatobi.dev"
 envfile = ".env.prod"

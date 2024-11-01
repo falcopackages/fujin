@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import cappa
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 from rich.prompt import Prompt
 
 
@@ -11,10 +11,10 @@ from rich.prompt import Prompt
     help="Tear down the project by stopping services and cleaning up resources"
 )
 @dataclass
-class Down(AppCommand):
+class Down(BaseCommand):
     def __call__(self):
         confirm = Prompt.ask(
-            f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.host_config.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
+            f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
             choices=["no", "yes"],
             default="no",
         )

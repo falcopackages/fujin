@@ -18,49 +18,49 @@ if TYPE_CHECKING:
     from fujin.config import HostConfig
 
 
-def _get_watchers(host_config: HostConfig) -> list[Responder]:
-    if not host_config.password:
+def _get_watchers(host: HostConfig) -> list[Responder]:
+    if not host.password:
         return []
     return [
         Responder(
             pattern=r"\[sudo\] password:",
-            response=f"{host_config.password}\n",
+            response=f"{host.password}\n",
         ),
         Responder(
-            pattern=rf"\[sudo\] password for {host_config.user}:",
-            response=f"{host_config.password}\n",
+            pattern=rf"\[sudo\] password for {host.user}:",
+            response=f"{host.password}\n",
         ),
     ]
 
 
 @contextmanager
-def host_connection(host_config: HostConfig) -> Connection:
+def host_connection(host: HostConfig) -> Connection:
     connect_kwargs = None
-    if host_config.key_filename:
-        connect_kwargs = {"key_filename": str(host_config.key_filename)}
-    elif host_config.password:
-        connect_kwargs = {"password": host_config.password}
+    if host.key_filename:
+        connect_kwargs = {"key_filename": str(host.key_filename)}
+    elif host.password:
+        connect_kwargs = {"password": host.password}
     conn = Connection(
-        host_config.ip,
-        user=host_config.user,
-        port=host_config.ssh_port,
+        host.ip,
+        user=host.user,
+        port=host.ssh_port,
         connect_kwargs=connect_kwargs,
     )
     try:
         conn.run = partial(
             conn.run,
             env={
-                "PATH": f"/home/{host_config.user}/.cargo/bin:/home/{host_config.user}/.local/bin:$PATH"
+                "PATH": f"/home/{host.user}/.cargo/bin:/home/{host.user}/.local/bin:$PATH"
             },
-            watchers=_get_watchers(host_config),
+            watchers=_get_watchers(host),
         )
         yield conn
     except AuthenticationException as e:
-        msg = f"Authentication failed for {host_config.user}@{host_config.ip} -p {host_config.ssh_port}.\n"
-        if host_config.key_filename:
-            msg += f"An SSH key was provided at {host_config.key_filename.resolve()}. Please verify its validity and correctness."
-        elif host_config.password:
-            msg += f"A password was provided through the environment variable {host_config.password_env}. Please ensure it is correct for the user {host_config.user}."
+        msg = f"Authentication failed for {host.user}@{host.ip} -p {host.ssh_port}.\n"
+        if host.key_filename:
+            msg += f"An SSH key was provided at {host.key_filename.resolve()}. Please verify its validity and correctness."
+        elif host.password:
+            msg += f"A password was provided through the environment variable {host.password_env}. Please ensure it is correct for the user {host.user}."
         else:
             msg += "No password or SSH key was provided. Ensure your current host has SSH access to the target host."
         raise cappa.Exit(msg, code=1) from e

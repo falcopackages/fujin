@@ -4,12 +4,12 @@ from typing import Annotated
 
 import cappa
 
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 
 
 @cappa.command(help="Manage web proxy.")
 @dataclass
-class Proxy(AppCommand):
+class Proxy(BaseCommand):
     @cappa.command(help="Install the proxy on the remote host")
     def install(self):
         with self.connection() as conn:

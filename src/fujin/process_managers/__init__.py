@@ -6,16 +6,14 @@ from typing import TYPE_CHECKING
 from fujin.connection import Connection
 
 if TYPE_CHECKING:
-    from fujin.config import Config, HostConfig
+    from fujin.config import Config
 
 
 class ProcessManager(Protocol):
     service_names: list[str]
 
     @classmethod
-    def create(
-        cls, config: Config, host_config: HostConfig, conn: Connection
-    ) -> ProcessManager: ...
+    def create(cls, config: Config, conn: Connection) -> ProcessManager: ...
 
     def get_service_name(self, process_name: str): ...
 

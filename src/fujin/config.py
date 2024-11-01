@@ -121,10 +121,6 @@ key_filename
 ~~~~~~~~~~~~
 Path to SSH private key file for authentication.
 
-default
-~~~~~~~
-Marks this host as the default when ``--host`` option isn't provided. Automatically set to ``true`` if only one host is configured.
-
 aliases
 -------
 
@@ -170,7 +166,7 @@ class Config(msgspec.Struct, kw_only=True):
     skip_project_install: bool = False
     _distfile: str = msgspec.field(name="distfile")
     aliases: dict[str, str] = msgspec.field(default=dict)
-    hosts: dict[str, HostConfig]
+    host: HostConfig
     processes: dict[str, str] = msgspec.field(default=dict)
     process_manager: str = "fujin.process_managers.systemd"
     webserver: Webserver
@@ -181,10 +177,6 @@ class Config(msgspec.Struct, kw_only=True):
     def __post_init__(self):
         self.app_bin = self.app_bin.format(app=self.app_name)
         self._distfile = self._distfile.format(version=self.version)
-
-        if len(self.hosts) == 1:
-            host = next(iter(self.hosts.values()))
-            host.default = True
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
             raise ValueError(
@@ -221,13 +213,17 @@ class HostConfig(msgspec.Struct, kw_only=True):
     password_env: str | None = None
     ssh_port: int = 22
     _key_filename: str | None = msgspec.field(name="key_filename", default=None)
-    default: bool = False
 
     def __post_init__(self):
         self.apps_dir = f"/home/{self.user}/{self.apps_dir}"
 
     def to_dict(self):
-        return {f: getattr(self, f) for f in self.__struct_fields__}
+        d = {f: getattr(self, f) for f in self.__struct_fields__}
+        d.pop("_key_filename")
+        d.pop("_envfile")
+        d["key_filename"] = self.key_filename
+        d["envfile"] = self.envfile
+        return d
 
     @property
     def envfile(self) -> Path:

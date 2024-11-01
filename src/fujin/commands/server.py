@@ -6,11 +6,11 @@ from typing import Annotated
 
 import cappa
 
-from fujin.commands import AppCommand
+from fujin.commands import BaseCommand
 
 
 @cappa.command(help="Manage server operations")
-class Server(AppCommand):
+class Server(BaseCommand):
     @cappa.command(help="Display information about the host system")
     def info(self):
         with self.connection() as conn:
