@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import urllib.request
+from pathlib import Path
+from typing import ClassVar
 
 import msgspec
 
@@ -12,8 +14,8 @@ from fujin.connection import Connection
 DEFAULT_VERSION = "2.8.4"
 GH_TAR_FILENAME = "caddy_{version}_linux_amd64.tar.gz"
 GH_DOWNL0AD_URL = (
-    "https://github.com/caddyserver/caddy/releases/download/v{version}/"
-    + GH_TAR_FILENAME
+        "https://github.com/caddyserver/caddy/releases/download/v{version}/"
+        + GH_TAR_FILENAME
 )
 GH_RELEASE_LATEST_URL = "https://api.github.com/repos/caddyserver/caddy/releases/latest"
 
@@ -24,9 +26,11 @@ class WebProxy(msgspec.Struct):
     app_name: str
     upstream: str
 
+    config_file: ClassVar[Path] = Path(".fujin/caddy.json")
+
     @classmethod
     def create(
-        cls, config: Config, host_config: HostConfig, conn: Connection
+            cls, config: Config, host_config: HostConfig, conn: Connection
     ) -> WebProxy:
         return cls(
             conn=conn,
@@ -35,6 +39,9 @@ class WebProxy(msgspec.Struct):
             app_name=config.app_name,
         )
 
+    def run_pty(self, *args, **kwargs):
+        return self.conn.run(*args, **kwargs, pty=True)
+
     def install(self):
         version = get_latest_gh_tag()
         download_url = GH_DOWNL0AD_URL.format(version=version)
@@ -42,10 +49,10 @@ class WebProxy(msgspec.Struct):
         with self.conn.cd("/tmp"):
             self.conn.run(f"curl -O -L {download_url}")
             self.conn.run(f"tar -xzvf {filename}")
-            self.conn.run("sudo mv caddy /usr/bin/", pty=True)
+            self.run_pty("sudo mv caddy /usr/bin/")
             self.conn.run(f"rm {filename}")
             self.conn.run("rm LICENSE && rm README.md")
-        self.conn.run("sudo groupadd --force --system caddy", pty=True)
+        self.run_pty("sudo groupadd --force --system caddy")
         self.conn.run(
             "sudo useradd --system --gid caddy --create-home --home-dir /var/lib/caddy --shell /usr/sbin/nologin --comment 'Caddy web server' caddy",
             pty=True,
@@ -56,16 +63,19 @@ class WebProxy(msgspec.Struct):
             hide="out",
             pty=True,
         )
-        self.conn.run("sudo systemctl daemon-reload", pty=True)
-        self.conn.run("sudo systemctl enable --now caddy-api", pty=True)
+        self.run_pty("sudo systemctl daemon-reload")
+        self.run_pty("sudo systemctl enable --now caddy-api")
 
     def uninstall(self):
-        self.conn.run("caddy stop")
-        self.conn.run("uv tool uninstall caddy")
+        self.stop()
+        self.run_pty("sudo systemctl disable caddy-api")
+        self.run_pty("sudo rm /usr/bin/caddy")
+        self.run_pty("sudo rm /etc/systemd/system/caddy-api.service")
+        self.run_pty("sudo userdel caddy")
+        self.run_pty("sudo groupdel caddy")
 
     def setup(self):
-        # TODO I should probably manage caddy with systemd directly
-        self.conn.run(f"echo '{json.dumps(self._generate_config())}' > caddy.json")
+        self.conn.run(f"echo '{json.dumps(self._get_config())}' > caddy.json")
         self.conn.run(
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
         )
@@ -78,7 +88,27 @@ class WebProxy(msgspec.Struct):
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
         )
 
-    def _generate_config(self) -> dict:
+    def start(self) -> None:
+        self.run_pty("sudo systemctl start caddy-api")
+
+    def stop(self) -> None:
+        self.run_pty("sudo systemctl stop caddy-api")
+
+    def status(self) -> None:
+        self.run_pty("sudo systemctl status caddy-api", warn=True)
+
+    def restart(self) -> None:
+        self.run_pty("sudo systemctl restart caddy-api")
+
+    def logs(self) -> None:
+        self.run_pty(f"sudo journalctl -u caddy-api -f", warn=True)
+
+    def export_config(self) -> None:
+        self.config_file.write_text(json.dumps(self._get_config()))
+
+    def _get_config(self) -> dict:
+        if self.config_file.exists():
+            return json.loads(self.config_file.read_text())
         return {
             "apps": {
                 "http": {

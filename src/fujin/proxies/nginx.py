@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import msgspec
 from fujin.config import Config
@@ -18,6 +19,11 @@ class WebProxy(msgspec.Struct):
     domain_name: str
     app_name: str
     upstream: str
+
+
+    @property
+    def config_file(self)->Path:
+        return Path(f".fujin/{self.app_name}.conf")
 
     @classmethod
     def create(
@@ -43,12 +49,12 @@ class WebProxy(msgspec.Struct):
     def setup(self):
         # TODO should not be running all this everytime
         self.conn.run(
-            f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.app_name}",
+            f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.app_name}.conf",
             hide="out",
             pty=True,
         )
         self.conn.run(
-            f"sudo ln -sf /etc/nginx/sites-available/{self.app_name} /etc/nginx/sites-enabled/{self.app_name}",
+            f"sudo ln -sf /etc/nginx/sites-available/{self.app_name}.conf /etc/nginx/sites-enabled/{self.app_name}.conf",
             pty=True,
         )
         self.conn.run("sudo systemctl restart nginx", pty=True)
@@ -57,8 +63,8 @@ class WebProxy(msgspec.Struct):
         )
         # Updating local Nginx configuration
         self.conn.get(
-            f"/etc/nginx/sites-available/{self.app_name}",
-            f".fujin/{self.app_name}",
+            f"/etc/nginx/sites-available/{self.app_name}.conf",
+            str(self.config_file),
         )
         # Enabling certificate auto-renewal
         self.conn.run("sudo systemctl enable certbot.timer", pty=True)
@@ -67,7 +73,28 @@ class WebProxy(msgspec.Struct):
     def teardown(self):
         pass
 
+    def start(self) -> None:
+        ...
+
+    def stop(self) -> None:
+        ...
+
+    def status(self) -> None:
+        ...
+
+    def restart(self) -> None:
+        ...
+
+    def logs(self) -> None:
+        ...
+
+    def export_config(self) -> None:
+        self.config_file.write_text(self._get_config())
+
+
     def _get_config(self) -> str:
+        if self.config_file.exists():
+            return self.config_file.read_text()
         return f"""
 server {{
    listen 80;

@@ -1,3 +1,4 @@
+import shlex
 import sys
 from pathlib import Path
 
@@ -7,10 +8,10 @@ from fujin.commands.app import App
 from fujin.commands.config import ConfigCMD
 from fujin.commands.deploy import Deploy
 from fujin.commands.down import Down
+from fujin.commands.proxy import Proxy
 from fujin.commands.redeploy import Redeploy
 from fujin.commands.server import Server
 from fujin.commands.up import Up
-import shlex
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -21,8 +22,8 @@ else:
 @cappa.command(help="Deployment of python web apps in a breeze :)")
 class Fujin:
     subcommands: cappa.Subcommands[
-        Up | Deploy | Redeploy | App | Server | ConfigCMD | Down
-    ]
+        Up | Deploy | Redeploy | App | Server | Proxy | ConfigCMD | Down
+        ]
 
 
 def main():

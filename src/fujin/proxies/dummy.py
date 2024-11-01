@@ -21,3 +21,6 @@ class WebProxy:
 
     def teardown(self):
         pass
+    
+    def export_config(self):
+        pass
