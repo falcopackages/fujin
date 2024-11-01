@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Annotated
 
 import cappa
 
@@ -51,7 +52,13 @@ class Proxy(AppCommand):
             self.create_web_proxy(conn).logs()
 
     @cappa.command(name="export-config", help="Export the proxy configuration file locally to the .fujin directory")
-    def export_config(self):
-        Path(".fujin").mkdir(exist_ok=True)
+    def export_config(self, overwrite: Annotated[bool, cappa.Arg(help="overwrite any existing config file")] = False):
         with self.connection() as conn:
-            self.create_web_proxy(conn).export_config()
+            proxy = self.create_web_proxy(conn)
+            if proxy.config_file.exists() and not overwrite:
+                self.stdout.output(
+                    f"[blue]{proxy.config_file} already exists, use --overwrite to overwrite it content.[/blue]")
+            else:
+                Path(".fujin").mkdir(exist_ok=True)
+                proxy.export_config()
+                self.stdout.output(f"[green]Config file successfully to {proxy.config_file}[/green]")

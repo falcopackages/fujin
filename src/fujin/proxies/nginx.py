@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import msgspec
+
 from fujin.config import Config
 from fujin.config import HostConfig
 from fujin.connection import Connection
@@ -20,14 +21,13 @@ class WebProxy(msgspec.Struct):
     app_name: str
     upstream: str
 
-
     @property
-    def config_file(self)->Path:
+    def config_file(self) -> Path:
         return Path(f".fujin/{self.app_name}.conf")
 
     @classmethod
     def create(
-        cls, config: Config, host_config: HostConfig, conn: Connection
+            cls, config: Config, host_config: HostConfig, conn: Connection
     ) -> WebProxy:
         return cls(
             conn=conn,
@@ -48,8 +48,9 @@ class WebProxy(msgspec.Struct):
 
     def setup(self):
         # TODO should not be running all this everytime
+        conf = self.config_file.read_text() if self.config_file.exists() else self._get_config()
         self.conn.run(
-            f"sudo echo '{self._get_config()}' | sudo tee /etc/nginx/sites-available/{self.app_name}.conf",
+            f"sudo echo '{conf}' | sudo tee /etc/nginx/sites-available/{self.app_name}.conf",
             hide="out",
             pty=True,
         )
@@ -91,11 +92,8 @@ class WebProxy(msgspec.Struct):
     def export_config(self) -> None:
         self.config_file.write_text(self._get_config())
 
-
     def _get_config(self) -> str:
-        if self.config_file.exists():
-            return self.config_file.read_text()
-        return f"""
+        return f"""None
 server {{
    listen 80;
    server_name {self.domain_name};

@@ -25,7 +25,6 @@ class WebProxy(msgspec.Struct):
     domain_name: str
     app_name: str
     upstream: str
-
     config_file: ClassVar[Path] = Path(".fujin/caddy.json")
 
     @classmethod
@@ -75,7 +74,8 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo groupdel caddy")
 
     def setup(self):
-        self.conn.run(f"echo '{json.dumps(self._get_config())}' > caddy.json")
+        config = json.loads(self.config_file.read_text()) if self.config_file.exists() else self._get_config()
+        self.conn.run(f"echo '{json.dumps(config)}' > caddy.json")
         self.conn.run(
             f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
         )
@@ -107,8 +107,6 @@ class WebProxy(msgspec.Struct):
         self.config_file.write_text(json.dumps(self._get_config()))
 
     def _get_config(self) -> dict:
-        if self.config_file.exists():
-            return json.loads(self.config_file.read_text())
         return {
             "apps": {
                 "http": {
