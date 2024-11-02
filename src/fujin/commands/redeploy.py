@@ -25,7 +25,9 @@ class Redeploy(BaseCommand):
             try:
                 host_requirements = (
                     conn.run(
-                        f"md5sum v{current_host_version}/requirements.txt", warn=True, hide=True
+                        f"md5sum v{current_host_version}/requirements.txt",
+                        warn=True,
+                        hide=True,
                     )
                     .stdout.strip()
                     .split()[0]
