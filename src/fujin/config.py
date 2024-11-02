@@ -18,6 +18,11 @@ python_version
 --------------
 The Python version for your virtualenv. If not specified, automatically parsed from ``.python-version`` file.
 
+versions_to_keep
+----------------
+The number of versions to keep on the host. After each deploy or redeploy, older versions are pruned based on this setting. By default, it keeps the latest 5 versions,
+set this to `None` to never prune.
+
 build_command
 -------------
 The command used to build your project's distribution file.
@@ -160,23 +165,24 @@ class Config(msgspec.Struct, kw_only=True):
     app_name: str = msgspec.field(name="app")
     app_bin: str = ".venv/bin/{app}"
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
+    versions_to_keep: int | None = 5
     python_version: str = msgspec.field(default_factory=lambda: find_python_version())
     build_command: str
     release_command: str | None = None
     skip_project_install: bool = False
-    _distfile: str = msgspec.field(name="distfile")
-    aliases: dict[str, str] = msgspec.field(default=dict)
+    distfile: str
+    aliases: dict[str, str] = msgspec.field(default_factory=dict)
     host: HostConfig
-    processes: dict[str, str] = msgspec.field(default=dict)
+    processes: dict[str, str] = msgspec.field(default_factory=dict)
     process_manager: str = "fujin.process_managers.systemd"
     webserver: Webserver
     _requirements: str = msgspec.field(name="requirements", default="requirements.txt")
-    hooks: HooksDict = msgspec.field(default=dict)
+    hooks: HooksDict = msgspec.field(default_factory=dict)
     local_config_dir: Path = Path(".fujin")
 
     def __post_init__(self):
         self.app_bin = self.app_bin.format(app=self.app_name)
-        self._distfile = self._distfile.format(version=self.version)
+        # self._distfile = self._distfile.format(version=self.version)
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
             raise ValueError(
@@ -184,12 +190,12 @@ class Config(msgspec.Struct, kw_only=True):
             )
 
     @property
-    def distfile(self) -> Path:
-        return Path(self._distfile)
-
-    @property
     def requirements(self) -> Path:
         return Path(self._requirements)
+
+    def get_distfile_path(self, version: str | None = None) -> Path:
+        version = version or self.version
+        return Path(self.distfile.format(version=version))
 
     @classmethod
     def read(cls) -> Config:

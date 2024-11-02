@@ -18,5 +18,7 @@ class Redeploy(BaseCommand):
             deploy.install_project(conn)
             deploy.release(conn)
             self.create_process_manager(conn).restart_services()
+            deploy.update_version_history(conn)
+            deploy.prune_assets(conn)
             hook_manager.post_deploy()
             self.stdout.output("[green]Redeployment completed successfully![/green]")

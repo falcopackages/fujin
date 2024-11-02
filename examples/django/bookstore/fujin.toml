@@ -1,13 +1,12 @@
 app = "bookstore"
 requirements = "requirements.txt"
 python_version = "3.13"
+versions_to_keep = 2
 build_command = "uv build && uv pip compile pyproject.toml -o requirements.txt"
 release_command = "bookstore migrate"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 webserver = { upstream = "unix//run/bookstore.sock" } # or "localhost:8000"
 
-[hooks.post_deploy]
-pip_list = "uv pip list"
 
 [aliases]
 console = "app exec -i shell"
