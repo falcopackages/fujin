@@ -7,7 +7,9 @@ import cappa
 from fujin.commands.app import App
 from fujin.commands.config import ConfigCMD
 from fujin.commands.deploy import Deploy
+from fujin.commands.docs import Docs
 from fujin.commands.down import Down
+from fujin.commands.init import Init
 from fujin.commands.proxy import Proxy
 from fujin.commands.redeploy import Redeploy
 from fujin.commands.rollback import Rollback
@@ -23,8 +25,8 @@ else:
 @cappa.command(help="Deployment of python web apps in a breeze :)")
 class Fujin:
     subcommands: cappa.Subcommands[
-        Up | Deploy | Redeploy | App | Server | Proxy | ConfigCMD | Down | Rollback
-    ]
+        Init | Up | Deploy | Redeploy | App | Server | Proxy | ConfigCMD | Docs | Down | Rollback
+        ]
 
 
 def main():

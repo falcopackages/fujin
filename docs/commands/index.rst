@@ -9,14 +9,16 @@ Commands
    :maxdepth: 2
    :caption: Contents:
 
-   up
    app
-   server
-   deploy
-   redeploy
-   proxy
-   rollback
-   prune
-   secrets
-   down
    config
+   deploy
+   docs
+   down
+   init
+   prune
+   proxy
+   redeploy
+   rollback
+   secrets
+   server
+   up
