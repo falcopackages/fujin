@@ -47,7 +47,7 @@ class Deploy(BaseCommand):
     def versioned_assets_dir(self) -> str:
         return f"{self.app_dir}/v{self.config.version}"
 
-    def transfer_files(self, conn: Connection):
+    def transfer_files(self, conn: Connection, skip_requirements: bool = False):
         if not self.config.host.envfile.exists():
             raise cappa.Exit(f"{self.config.host.envfile} not found", code=1)
 
@@ -55,10 +55,11 @@ class Deploy(BaseCommand):
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
         conn.put(str(self.config.host.envfile), f"{self.app_dir}/.env")
         conn.run(f"mkdir -p {self.versioned_assets_dir}")
-        conn.put(
-            str(self.config.requirements),
-            f"{self.versioned_assets_dir}/requirements.txt",
-        )
+        if not skip_requirements:
+            conn.put(
+                str(self.config.requirements),
+                f"{self.versioned_assets_dir}/requirements.txt",
+            )
         distfile_path = self.config.get_distfile_path()
         conn.put(
             str(distfile_path),
@@ -74,13 +75,16 @@ export PATH=".venv/bin:$PATH"
 """
         conn.run(f"echo '{appenv.strip()}' > .appenv")
 
-    def install_project(self, conn: Connection, version: str | None = None):
+    def install_project(
+        self, conn: Connection, version: str | None = None, *, skip_setup: bool = False
+    ):
         if self.config.skip_project_install:
             return
         version = version or self.config.version
         versioned_assets_dir = f"{self.app_dir}/v{version}"
-        conn.run("uv venv")
-        conn.run(f"uv pip install -r {versioned_assets_dir}/requirements.txt")
+        if not skip_setup:
+            conn.run("uv venv")
+            conn.run(f"uv pip install -r {versioned_assets_dir}/requirements.txt")
         conn.run(
             f"uv pip install {versioned_assets_dir}/{self.config.get_distfile_path(version).name}"
         )
@@ -90,9 +94,7 @@ export PATH=".venv/bin:$PATH"
             conn.run(f"source .env && {self.config.release_command}")
 
     def update_version_history(self, conn: Connection):
-        result = conn.run(
-            "head -n 1 .versions 2>/dev/null", warn=True, hide=True
-        ).stdout.strip()
+        result = conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
         if result == self.config.version:
             return
         if result == "":
