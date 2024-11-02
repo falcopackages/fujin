@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
-from rich.prompt import Prompt
+from rich.prompt import Prompt, Confirm
 
 from fujin.commands import BaseCommand
 
@@ -24,12 +24,13 @@ class Down(BaseCommand):
     ] = False
 
     def __call__(self):
-        confirm = Prompt.ask(
-            f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
-            choices=["no", "yes"],
-            default="no",
-        )
-        if confirm == "no":
+        try:
+            confirm = Confirm.ask(
+                f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
+            )
+        except KeyboardInterrupt as e:
+            raise cappa.Exit("Teardown aborted", code=0)
+        if not confirm:
             return
         with self.connection() as conn:
             hook_manager = self.create_hook_manager(conn)
