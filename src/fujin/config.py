@@ -21,7 +21,7 @@ The Python version for your virtualenv. If not specified, automatically parsed f
 versions_to_keep
 ----------------
 The number of versions to keep on the host. After each deploy or redeploy, older versions are pruned based on this setting. By default, it keeps the latest 5 versions,
-set this to `None` to never prune.
+set this to `None` to never automatically prune.
 
 build_command
 -------------
