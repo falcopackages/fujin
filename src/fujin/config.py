@@ -20,12 +20,12 @@ The Python version for your virtualenv. If not specified, automatically parsed f
 
 versions_to_keep
 ----------------
-The number of versions to keep on the host. After each deploy or redeploy, older versions are pruned based on this setting. By default, it keeps the latest 5 versions,
+The number of versions to keep on the host. After each deploy, older versions are pruned based on this setting. By default, it keeps the latest 5 versions,
 set this to `None` to never automatically prune.
 
 build_command
 -------------
-The command used to build your project's distribution file.
+The command to use to build your project's distribution file.
 
 distfile
 --------
@@ -35,10 +35,6 @@ Supports version placeholder, e.g., ``dist/app_name-{version}-py3-none-any.whl``
 release_command
 ---------------
 Optional command to run at the end of deployment (e.g., database migrations).
-
-skip_project_install
---------------------
-If ``true``, skips virtualenv creation and project installation. Useful when customizing project installation via hooks.
 
 requirements
 ------------
@@ -61,21 +57,22 @@ upstream
 The address where your web application listens for requests. Supports any value compatible with your chosen web proxy:
 
 - HTTP address (e.g., ``localhost:8000``)
-- Unix socket (e.g., ``unix:/run/project.sock``)
+- Unix socket (e.g., ``unix//run/project.sock``)
 
 Example:
 
 .. code-block:: toml
 
     [webserver]
-    upstream = "unix:/run/project.sock"
+    upstream = "unix//run/project.sock"
     type = "fujin.proxies.caddy"
 
 processes
 ---------
 
-A mapping of process names to commands that will be managed by your process manager. Define as many processes as needed, but
-when using any proxy other than ``fujin.proxies.dummy``, a ``web`` process must be declared.
+A mapping of process names to commands that will be managed by the process manager. Define as many processes as needed, but
+when using any proxy other than ``fujin.proxies.dummy``, a ``web`` process must be declared.  Refer to the ``apps_dir``
+setting on the host to understand how ``app_dir`` is determined.
 
 Example:
 
@@ -104,27 +101,35 @@ user
 ~~~~
 The login user for running remote tasks. Should have passwordless sudo access for optimal operation.
 
+.. note::
+
+    You can create a user with these requirements using the ``fujin server create-user`` command.
+
 envfile
 ~~~~~~~
 Path to the production environment file that will be copied to the host.
 
 apps_dir
 ~~~~~~~~
+
 Base directory for project storage on the host. Path is relative to user's home directory.
-Default: ``.local/share/fujin``
+Default: ``.local/share/fujin``. This value determines your project's ``app_dir``, which is ``{apps_dir}/{app}``.
 
 password_env
 ~~~~~~~~~~~~
+
 Environment variable containing the user's password. Only needed if the user cannot run sudo without a password.
 
 ssh_port
 ~~~~~~~~
+
 SSH port for connecting to the host.
 Default: ``22``
 
 key_filename
 ~~~~~~~~~~~~
-Path to SSH private key file for authentication.
+
+Path to the SSH private key file for authentication. Optional if using your system's default key location.
 
 aliases
 -------
