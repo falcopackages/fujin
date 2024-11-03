@@ -18,11 +18,16 @@ GH_DOWNL0AD_URL = (
 GH_RELEASE_LATEST_URL = "https://api.github.com/repos/caddyserver/caddy/releases/latest"
 
 
+# TODO: let the user write the configuration with a simple syntax and export use caddy adapter, same for exporting,
+#   don't export to json
+
+
 class WebProxy(msgspec.Struct):
     conn: Connection
     domain_name: str
     app_name: str
     upstream: str
+    statics: dict[str, str]
     local_config_dir: Path
 
     @property
@@ -37,6 +42,7 @@ class WebProxy(msgspec.Struct):
             upstream=config.webserver.upstream,
             app_name=config.app_name,
             local_config_dir=config.local_config_dir,
+            statics=config.webserver.statics,
         )
 
     def run_pty(self, *args, **kwargs):
@@ -81,15 +87,14 @@ class WebProxy(msgspec.Struct):
         )
         self.conn.run(f"echo '{json.dumps(config)}' > caddy.json")
         self.conn.run(
-            f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
+            f"curl localhost:2019/config/apps/http/servers/{self.app_name} -H 'Content-Type: application/json' -d @caddy.json"
         )
         # TODO: stop when received an {"error":"loading config: loading new config: http app module: start: listening on :443: listen tcp :443: bind: permission denied"}, not a 200 ok
 
     def teardown(self):
-        empty_config = {"apps": {"http": {"servers": {self.app_name: {}}}}}
-        self.conn.run(f"echo '{json.dumps(empty_config)}' > caddy.json")
+        self.conn.run(f"echo '{json.dumps({})}' > caddy.json")
         self.conn.run(
-            f"curl localhost:2019/load -H 'Content-Type: application/json' -d @caddy.json"
+            f"curl localhost:2019/config/apps/http/servers/{self.app_name} -H 'Content-Type: application/json' -d @caddy.json"
         )
 
     def start(self) -> None:
@@ -111,28 +116,59 @@ class WebProxy(msgspec.Struct):
         self.config_file.write_text(json.dumps(self._get_config()))
 
     def _get_config(self) -> dict:
-        return {
-            "apps": {
-                "http": {
-                    "servers": {
-                        self.app_name: {
-                            "listen": [":443"],
+        handle = []
+        config = {
+            "listen": [":443"],
+            "routes": [
+                {
+                    "match": [{"host": [self.domain_name]}],
+                    "handle": handle,
+                }
+            ],
+        }
+        reverse_proxy = {
+            "handler": "reverse_proxy",
+            "upstreams": [{"dial": self.upstream}],
+        }
+        if not self.statics:
+            handle.append(reverse_proxy)
+            return config
+        routes = []
+        handle.append({"handler": "subroute", "routes": routes})
+        for path, directory in self.statics.items():
+            strip_path_prefix = path.replace("/*", "")
+            if strip_path_prefix.endswith("/"):
+                strip_path_prefix = strip_path_prefix[:-1]
+            routes.append(
+                {
+                    "handle": [
+                        {
+                            "handler": "subroute",
                             "routes": [
                                 {
-                                    "match": [{"host": [self.domain_name]}],
                                     "handle": [
                                         {
-                                            "handler": "reverse_proxy",
-                                            "upstreams": [{"dial": self.upstream}],
+                                            "handler": "rewrite",
+                                            "strip_path_prefix": strip_path_prefix,
                                         }
-                                    ],
-                                }
+                                    ]
+                                },
+                                {
+                                    "handle": [
+                                        {"handler": "vars", "root": directory},
+                                        {
+                                            "handler": "file_server",
+                                        },
+                                    ]
+                                },
                             ],
                         }
-                    }
+                    ],
+                    "match": [{"path": [path]}],
                 }
-            }
-        }
+            )
+        routes.append({"handle": [reverse_proxy]})
+        return config
 
 
 def get_latest_gh_tag() -> str:

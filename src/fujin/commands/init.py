@@ -21,15 +21,15 @@ class Init(BaseCommand):
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
         profile_to_func = {"simple": simple_config, "falco": falco_config}
-        config = profile_to_func[self.profile]()
+        app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+        config = profile_to_func[self.profile](app_name)
         fujin_toml.write_text(tomli_w.dumps(config))
         self.stdout.output(
             "[green]Sample configuration file generated successfully![/green]"
         )
 
 
-def simple_config(app_name: str | None) -> dict:
-    app_name = app_name or Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+def simple_config(app_name) -> dict:
     config = {
         "app": app_name,
         "version": "0.1.0",

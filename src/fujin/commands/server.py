@@ -26,7 +26,7 @@ class Server(BaseCommand):
             hook_manager = self.create_hook_manager(conn)
             hook_manager.pre_bootstrap()
             conn.run("sudo apt update && sudo apt upgrade -y", pty=True)
-            conn.run("sudo apt install -y sqlite3 curl", pty=True)
+            conn.run("sudo apt install -y sqlite3 curl rsync", pty=True)
             result = conn.run("command -v uv", warn=True)
             if not result.ok:
                 conn.run("curl -LsSf https://astral.sh/uv/install.sh | sh")

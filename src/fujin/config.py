@@ -59,6 +59,12 @@ The address where your web application listens for requests. Supports any value 
 - HTTP address (e.g., ``localhost:8000``)
 - Unix socket (e.g., ``unix//run/project.sock``)
 
+statics
+~~~~~~~
+
+Defines the mapping of URL paths to local directories for serving static files. The syntax and support for static
+file serving depend on the selected reverse proxy.
+
 Example:
 
 .. code-block:: toml
@@ -66,6 +72,7 @@ Example:
     [webserver]
     upstream = "unix//run/project.sock"
     type = "fujin.proxies.caddy"
+    statics = { "/static/*" = "/var/www/example.com/static/" }
 
 processes
 ---------
@@ -262,6 +269,7 @@ class HostConfig(msgspec.Struct, kw_only=True):
 class Webserver(msgspec.Struct):
     upstream: str
     type: str = "fujin.proxies.caddy"
+    statics: dict[str, str] = msgspec.field(default_factory=dict)
 
 
 def read_version_from_pyproject():

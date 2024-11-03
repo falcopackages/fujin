@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm
 
 from fujin.commands import BaseCommand
 
