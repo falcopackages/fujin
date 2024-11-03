@@ -23,6 +23,15 @@ class Init(BaseCommand):
         profile_to_func = {"simple": simple_config, "falco": falco_config}
         app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
         config = profile_to_func[self.profile](app_name)
+        if not Path(".python-version").exists():
+            config["python_version"] = "3.12"
+        pyproject_toml = Path("pyproject.toml")
+        if pyproject_toml.exists():
+            pyproject = tomllib.loads(pyproject_toml.read_text())
+            config["app"] = pyproject.get("project", {}).get("name", app_name)
+            if pyproject.get("project", {}).get("version"):
+                # fujin will read the version itself from the pyproject
+                config.pop("version")
         fujin_toml.write_text(tomli_w.dumps(config))
         self.stdout.output(
             "[green]Sample configuration file generated successfully![/green]"
@@ -30,7 +39,7 @@ class Init(BaseCommand):
 
 
 def simple_config(app_name) -> dict:
-    config = {
+    return {
         "app": app_name,
         "version": "0.1.0",
         "build_command": "uv build && uv pip compile pyproject.toml -o requirements.txt",
@@ -51,16 +60,6 @@ def simple_config(app_name) -> dict:
             "envfile": ".env.prod",
         },
     }
-    if not Path(".python-version").exists():
-        config["python_version"] = "3.12"
-    pyproject_toml = Path("pyproject.toml")
-    if pyproject_toml.exists():
-        pyproject = tomllib.loads(pyproject_toml.read_text())
-        config["app"] = pyproject.get("project", {}).get("name", app_name)
-        if pyproject.get("project", {}).get("version"):
-            # fujin will read the version itself from the pyproject
-            config.pop("version")
-    return config
 
 
 def falco_config(app_name: str) -> dict:
