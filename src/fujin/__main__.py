@@ -25,8 +25,18 @@ else:
 @cappa.command(help="Deployment of python web apps in a breeze :)")
 class Fujin:
     subcommands: cappa.Subcommands[
-        Init | Up | Deploy | Redeploy | App | Server | Proxy | ConfigCMD | Docs | Down | Rollback
-        ]
+        Init
+        | Up
+        | Deploy
+        | Redeploy
+        | App
+        | Server
+        | Proxy
+        | ConfigCMD
+        | Docs
+        | Down
+        | Rollback
+    ]
 
 
 def main():

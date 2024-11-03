@@ -36,7 +36,7 @@ class Redeploy(BaseCommand):
             except IndexError:
                 skip_requirements = False
             deploy.transfer_files(conn, skip_requirements=skip_requirements)
-            if skip_requirements:
+            if skip_requirements and current_host_version != self.config.version:
                 conn.run(
                     f"cp v{current_host_version}/requirements.txt  {deploy.versioned_assets_dir}/requirements.txt "
                 )

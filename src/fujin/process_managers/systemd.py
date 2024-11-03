@@ -33,7 +33,10 @@ class ProcessManager:
 
     @property
     def service_names(self) -> list[str]:
-        return [self.get_service_name(name) for name in self.processes]
+        services = [self.get_service_name(name) for name in self.processes]
+        if self.is_using_unix_socket:
+            services.append(f"{self.app_name}.socket")
+        return services
 
     def get_service_name(self, process_name: str):
         if process_name == "web":
@@ -102,36 +105,47 @@ class ProcessManager:
 
     def uninstall_services(self) -> None:
         self.stop_services()
-        if self.is_using_unix_socket:
-            self.run_pty(f"sudo systemctl disable {self.app_name}.socket")
-            self.run_pty(f"sudo rm /etc/systemd/system/{self.app_name}.socket")
         for name in self.service_names:
             self.run_pty(f"sudo systemctl disable {name}", warn=True)
             self.run_pty(f"sudo rm /etc/systemd/system/{name}", warn=True)
 
     def start_services(self, *names) -> None:
         names = names or self.service_names
-        if self.is_using_unix_socket:
-            self.run_pty(f"sudo systemctl start {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl start {name}")
 
     def restart_services(self, *names) -> None:
         names = names or self.service_names
-        if self.is_using_unix_socket:
-            self.run_pty(f"sudo systemctl restart {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl restart {name}")
 
     def stop_services(self, *names) -> None:
         names = names or self.service_names
-        if self.is_using_unix_socket:
-            self.run_pty(f"sudo systemctl stop {self.app_name}.socket")
         for name in names:
             if name in self.service_names:
                 self.run_pty(f"sudo systemctl stop {name}")
+
+    def is_enabled(self, *names) -> dict[str, bool]:
+        names = names or self.service_names
+        return {
+            name: self.run_pty(
+                f"sudo systemctl is-enabled {name}", warn=True, hide=True
+            ).stdout.strip()
+            == "enabled"
+            for name in names
+        }
+
+    def is_active(self, *names) -> dict[str, bool]:
+        names = names or self.service_names
+        return {
+            name: self.run_pty(
+                f"sudo systemctl is-active {name}", warn=True, hide=True
+            ).stdout.strip()
+            == "active"
+            for name in names
+        }
 
     def service_logs(self, name: str, follow: bool = False):
         # TODO: add more options here

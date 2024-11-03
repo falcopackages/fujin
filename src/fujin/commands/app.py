@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 import cappa
+
 from fujin.commands import BaseCommand
 
 
@@ -10,22 +11,44 @@ from fujin.commands import BaseCommand
 class App(BaseCommand):
     @cappa.command(help="Display information about the application")
     def info(self):
-        # TODO: add info / details command that will list all services with their current status, if they are installed or running or stopped
-        # systemctl is-enabled  to check is a service is enabled
         with self.app_environment() as conn:
+            remote_version = (
+                conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
+                or "N/A"
+            )
+            rollback_targets = conn.run(
+                "sed -n '2,$p' .versions", warn=True, hide=True
+            ).stdout.strip()
             infos = {
                 "app_name": self.config.app_name,
+                "app_dir": self.app_dir,
                 "app_bin": self.config.app_bin,
-                "version": self.config.version,
+                "local_version": self.config.version,
+                "remote_version": remote_version,
                 "python_version": self.config.python_version,
-                "services": ", ".join(
-                    s for s in self.create_process_manager(conn).service_names
-                ),
+                "rollback_targets": ", ".join(rollback_targets.split("\n"))
+                if rollback_targets
+                else "N/A",
             }
-        formatted_text = "\n".join(
-            f"[bold green]{key}:[/bold green] {value}" for key, value in infos.items()
-        )
-        self.stdout.output(formatted_text)
+            pm = self.create_process_manager(conn)
+            services: dict[str, bool] = pm.is_active()
+
+        infos_text = "\n".join(f"{key}: {value}" for key, value in infos.items())
+        from rich.table import Table
+
+        table = Table(title="", header_style="bold cyan")
+        table.add_column("Service", style="")
+        table.add_column("Running?")
+        for service, is_active in services.items():
+            table.add_row(
+                service,
+                "[bold green]Yes[/bold green]"
+                if is_active
+                else "[bold red]No[/bold red]",
+            )
+
+        self.stdout.output(infos_text)
+        self.stdout.output(table)
 
     @cappa.command(help="Run an arbitrary command via the application binary")
     def exec(
