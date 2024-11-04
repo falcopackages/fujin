@@ -50,7 +50,7 @@ def simple_config(app_name) -> dict:
         },
         "release_command": f"{app_name} migrate",
         "processes": {
-            "web": f".venv/bin/gunicorn {app_name}.wsgi:app --bind 0.0.0.0:8000"
+            "web": f".venv/bin/gunicorn {app_name}.wsgi:application --bind 0.0.0.0:8000"
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
