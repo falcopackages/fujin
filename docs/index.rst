@@ -9,7 +9,7 @@ fujin documentation
 
 .. important::
 
-   This a work in progress, not ready for use yet.
+   This a work in progress, not ready for production use yet.
 
 
 .. .. include:: ../README.md
