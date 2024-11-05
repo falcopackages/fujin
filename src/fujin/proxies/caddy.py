@@ -73,7 +73,9 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo systemctl enable --now caddy-api")
         # to initialize the caddy config, when running setup on a fresh caddy setup it fails because the key config/apps was not previously defined
         # TODO this will reset the config of any existing server, should probably do I check before running this
-        self.conn.run("""curl --silent http://localhost:2019/config/ -d '{"apps":{"http": {"servers": {}}}}' -H 'Content-Type: application/json'""")
+        self.conn.run(
+            """curl --silent http://localhost:2019/config/ -d '{"apps":{"http": {"servers": {}}}}' -H 'Content-Type: application/json'"""
+        )
 
     def uninstall(self):
         self.stop()

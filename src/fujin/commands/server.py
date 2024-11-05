@@ -38,11 +38,6 @@ class Server(BaseCommand):
                 "[green]Server bootstrap completed successfully![/green]"
             )
 
-    @cappa.command(help="Stop and uninstall the web proxy")
-    def uninstall_proxy(self):
-        with self.connection() as conn:
-            self.create_web_proxy(conn).uninstall()
-
     @cappa.command(
         help="Execute an arbitrary command on the server, optionally in interactive mode"
     )
