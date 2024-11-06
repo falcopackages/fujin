@@ -63,7 +63,8 @@ statics
 ~~~~~~~
 
 Defines the mapping of URL paths to local directories for serving static files. The syntax and support for static
-file serving depend on the selected reverse proxy.
+file serving depend on the selected reverse proxy. The directories you map should be accessible by the web server, meaning
+with read permissions for the ``www-data`` group; a reliable choice is ``/var/www``.
 
 Example:
 
@@ -72,7 +73,7 @@ Example:
     [webserver]
     upstream = "unix//run/project.sock"
     type = "fujin.proxies.caddy"
-    statics = { "/static/*" = "/var/www/example.com/static/" }
+    statics = { "/static/*" = "/var/www/myproject/static/" }
 
 processes
 ---------
