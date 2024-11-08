@@ -18,21 +18,20 @@ class Deploy(BaseCommand):
         self.build_app()
 
         with self.connection() as conn:
+            process_manager = self.create_process_manager(conn)
             conn.run(f"mkdir -p {self.app_dir}")
             with conn.cd(self.app_dir):
                 self.create_hook_manager(conn).pre_deploy()
                 self.transfer_files(conn)
-            process_manager = self.create_process_manager(conn)
-            with conn.cd(self.app_dir):
                 self.install_project(conn)
             with self.app_environment() as app_conn:
                 self.release(app_conn)
-            process_manager.install_services()
-            process_manager.reload_configuration()
-            process_manager.restart_services()
-            self.create_web_proxy(conn).setup()
-            self.update_version_history(conn)
-            self.prune_assets(conn)
+                process_manager.install_services()
+                process_manager.reload_configuration()
+                process_manager.restart_services()
+                self.create_web_proxy(app_conn).setup()
+                self.update_version_history(app_conn)
+                self.prune_assets(app_conn)
             self.create_hook_manager(conn).post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
