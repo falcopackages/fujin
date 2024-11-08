@@ -108,7 +108,7 @@ export PATH="{self.app_dir}:$PATH"
         full_path_app_bin = f"{self.app_dir}/{self.config.app_bin}"
         conn.run(f"rm {full_path_app_bin}", warn=True)
         conn.run(
-            f"ln -s {full_path_app_bin} {self.versioned_assets_dir}/{self.config.get_distfile_path(version).name}"
+            f"ln -s {self.versioned_assets_dir}/{self.config.get_distfile_path(version).name} {full_path_app_bin}"
         )
 
     def release(self, conn: Connection):

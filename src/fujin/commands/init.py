@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +12,7 @@ from fujin.config import tomllib, InstallationMode
 
 
 @cappa.command(help="Generate a sample configuration file")
+@dataclass
 class Init(BaseCommand):
     profile: Annotated[
         str,
@@ -42,13 +44,13 @@ def simple_config(app_name) -> dict:
         "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
         "requirements": "requirements.txt",
         "webserver": {
-            "upstream": "localhost:8000",
+            "upstream": f"unix//run/{app_name}.sock",
             "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.PY_PACKAGE,
         "processes": {
-            "web": f".venv/bin/gunicorn {app_name}.wsgi:application --bind 0.0.0.0:8000"
+            "web": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix//run/{app_name}.sock"
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
@@ -97,12 +99,12 @@ def binary_config(app_name: str) -> dict:
         "build_command": "just build-bin",
         "distfile": f"dist/bin/{app_name}-{{version}}",
         "webserver": {
-            "upstream": "localhost:8000",
+            "upstream": f"unix//run/{app_name}.sock",
             "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.BINARY,
-        "processes": {"web": f"{app_name} prodserver"},
+        "processes": {"web": f"{app_name} prodserver --host unix//run/{app_name}.sock"},
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
             "ip": "127.0.0.1",

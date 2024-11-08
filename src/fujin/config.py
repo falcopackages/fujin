@@ -172,7 +172,7 @@ from .hooks import HooksDict, StrEnum
 
 class InstallationMode(StrEnum):
     PY_PACKAGE = "python-package"
-    BINARY = "BINARY"
+    BINARY = "binary"
 
 
 class Config(msgspec.Struct, kw_only=True):
@@ -203,7 +203,7 @@ class Config(msgspec.Struct, kw_only=True):
                 "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy"
             )
 
-    @cached_property
+    @property
     def app_bin(self) -> str:
         if self.installation_mode == InstallationMode.PY_PACKAGE:
             return f".venv/bin/{self.app_name}"
