@@ -49,6 +49,9 @@ class WebProxy(msgspec.Struct):
         return self.conn.run(*args, **kwargs, pty=True)
 
     def install(self):
+        result = self.conn.run(f"command -v caddy", warn=True, hide=True)
+        if result.ok:
+            return
         version = get_latest_gh_tag()
         download_url = GH_DOWNL0AD_URL.format(version=version)
         filename = GH_TAR_FILENAME.format(version=version)
@@ -71,8 +74,6 @@ class WebProxy(msgspec.Struct):
         )
         self.run_pty("sudo systemctl daemon-reload")
         self.run_pty("sudo systemctl enable --now caddy-api")
-        # to initialize the caddy config, when running setup on a fresh caddy setup it fails because the key config/apps was not previously defined
-        # TODO this will reset the config of any existing server, should probably do I check before running this
         self.conn.run(
             """curl --silent http://localhost:2019/config/ -d '{"apps":{"http": {"servers": {}}}}' -H 'Content-Type: application/json'"""
         )
