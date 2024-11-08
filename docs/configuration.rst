@@ -9,10 +9,24 @@ Example
 
 This is a minimal working example.
 
-.. jupyter-execute::
-    :hide-code:
+.. tab-set::
 
-    from fujin.commands.init import simple_config
-    from tomli_w import dumps
+    .. tab-item:: simple python package
 
-    print(dumps(simple_config("bookstore")))
+        .. jupyter-execute::
+            :hide-code:
+
+            from fujin.commands.init import simple_config
+            from tomli_w import dumps
+
+            print(dumps(simple_config("bookstore")))
+
+    .. tab-item:: binary mode
+
+        .. jupyter-execute::
+            :hide-code:
+
+            from fujin.commands.init import binary_config
+            from tomli_w import dumps
+
+            print(dumps(binary_config("bookstore")))

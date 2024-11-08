@@ -5,18 +5,14 @@ app
 ---
 The name of your project or application. Must be a valid Python package name.
 
-app_bin
--------
-Path to your application's executable. Used by the **app** subcommand for remote execution.
-Default: ``.venv/bin/{app}``
-
 version
 --------
 The version of your project to build and deploy. If not specified, automatically parsed from ``pyproject.toml`` under ``project.version``.
 
 python_version
 --------------
-The Python version for your virtualenv. If not specified, automatically parsed from ``.python-version`` file.
+The Python version for your virtualenv. If not specified, automatically parsed from ``.python-version`` file. This is only
+required if the installation mode is set to ``python-package``
 
 versions_to_keep
 ----------------
@@ -38,8 +34,7 @@ Optional command to run at the end of deployment (e.g., database migrations).
 
 requirements
 ------------
-Path to your requirements file.
-Default: ``requirements.txt``
+Optional path to your requirements file. This will only be used when the installation mode is set to ``python-package``
 
 Webserver
 ---------
@@ -160,6 +155,7 @@ from __future__ import annotations
 
 import os
 import sys
+from functools import cached_property
 from pathlib import Path
 
 import msgspec
@@ -171,40 +167,47 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-from .hooks import HooksDict
+from .hooks import HooksDict, StrEnum
+
+
+class InstallationMode(StrEnum):
+    PY_PACKAGE = "python-package"
+    BINARY = "BINARY"
 
 
 class Config(msgspec.Struct, kw_only=True):
     app_name: str = msgspec.field(name="app")
-    app_bin: str = ".venv/bin/{app}"
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
     versions_to_keep: int | None = 5
-    python_version: str = msgspec.field(default_factory=lambda: find_python_version())
+    python_version: str | None = None
     build_command: str
     release_command: str | None = None
-    skip_project_install: bool = False
+    installation_mode: InstallationMode
     distfile: str
     aliases: dict[str, str] = msgspec.field(default_factory=dict)
     host: HostConfig
     processes: dict[str, str] = msgspec.field(default_factory=dict)
     process_manager: str = "fujin.process_managers.systemd"
     webserver: Webserver
-    _requirements: str = msgspec.field(name="requirements", default="requirements.txt")
+    requirements: str | None = None
     hooks: HooksDict = msgspec.field(default_factory=dict)
     local_config_dir: Path = Path(".fujin")
 
     def __post_init__(self):
-        self.app_bin = self.app_bin.format(app=self.app_name)
-        # self._distfile = self._distfile.format(version=self.version)
+        if self.installation_mode == InstallationMode.PY_PACKAGE:
+            if not self.python_version:
+                self.python_version = find_python_version()
 
         if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
             raise ValueError(
                 "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy"
             )
 
-    @property
-    def requirements(self) -> Path:
-        return Path(self._requirements)
+    @cached_property
+    def app_bin(self) -> str:
+        if self.installation_mode == InstallationMode.PY_PACKAGE:
+            return f".venv/bin/{self.app_name}"
+        return self.app_name
 
     def get_distfile_path(self, version: str | None = None) -> Path:
         version = version or self.version

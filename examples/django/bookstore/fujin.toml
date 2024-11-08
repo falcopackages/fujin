@@ -3,8 +3,9 @@ requirements = "requirements.txt"
 python_version = "3.13"
 versions_to_keep = 2
 build_command = "uv build && uv pip compile pyproject.toml -o requirements.txt"
-release_command = "bookstore migrate && bookstore collectstatic --no-input && sudo rsync --mkpath -a --delete staticfiles/ /var/www/bookstore/static/"
+release_command = "bookstore migrate && bookstore collectstatic --no-input && sudo mkdir -p /var/www/bookstore/static/ && sudo rsync  -a --delete staticfiles/ /var/www/bookstore/static/"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
+installation_mode = "python-package"
 
 [webserver]
 upstream = "unix//run/bookstore.sock"
@@ -20,18 +21,18 @@ shell = "server exec --appenv -i bash"
 web = ".venv/bin/gunicorn bookstore.wsgi:application --access-logfile - --error-logfile -"
 worker = ".venv/bin/bookstore db_worker"
 
-#[host]
-#ip = "127.0.0.1"
-#domain_name = "bookstore.localhost.dev"
-#envfile = ".env.prod"
-#user = "vagrant"
-#key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
-#ssh_port = 2222
-
 [host]
-ip = "aws-ec2"
-domain_name = "test.oluwatobi.dev"
+ip = "127.0.0.1"
+domain_name = "bookstore.localhost.dev"
 envfile = ".env.prod"
-user = "ubuntu"
-key_filename = "../../../aws.pem"
+user = "vagrant"
+key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
+ssh_port = 2222
+
+#[host]
+#ip = "aws-ec2"
+#domain_name = "test.oluwatobi.dev"
+#envfile = ".env.prod"
+#user = "ubuntu"
+#key_filename = "../../../aws.pem"
 

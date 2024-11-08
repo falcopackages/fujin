@@ -7,31 +7,27 @@ import cappa
 import tomli_w
 
 from fujin.commands import BaseCommand
-from fujin.config import tomllib
+from fujin.config import tomllib, InstallationMode
 
 
 @cappa.command(help="Generate a sample configuration file")
 class Init(BaseCommand):
     profile: Annotated[
-        str, cappa.Arg(choices=["simple", "falco"], short="-p", long="--profile")
+        str,
+        cappa.Arg(choices=["simple", "falco", "binary"], short="-p", long="--profile"),
     ] = "simple"
 
     def __call__(self):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
-        profile_to_func = {"simple": simple_config, "falco": falco_config}
+        profile_to_func = {
+            "simple": simple_config,
+            "falco": falco_config,
+            "binary": binary_config,
+        }
         app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
         config = profile_to_func[self.profile](app_name)
-        if not Path(".python-version").exists():
-            config["python_version"] = "3.12"
-        pyproject_toml = Path("pyproject.toml")
-        if pyproject_toml.exists():
-            pyproject = tomllib.loads(pyproject_toml.read_text())
-            config["app"] = pyproject.get("project", {}).get("name", app_name)
-            if pyproject.get("project", {}).get("version"):
-                # fujin will read the version itself from the pyproject
-                config.pop("version")
         fujin_toml.write_text(tomli_w.dumps(config))
         self.stdout.output(
             "[green]Sample configuration file generated successfully![/green]"
@@ -39,16 +35,18 @@ class Init(BaseCommand):
 
 
 def simple_config(app_name) -> dict:
-    return {
+    config = {
         "app": app_name,
-        "version": "0.1.0",
+        "version": "0.0.1",
         "build_command": "uv build && uv pip compile pyproject.toml -o requirements.txt",
         "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
+        "requirements": "requirements.txt",
         "webserver": {
             "upstream": "localhost:8000",
             "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
+        "installation_mode": InstallationMode.PY_PACKAGE,
         "processes": {
             "web": f".venv/bin/gunicorn {app_name}.wsgi:application --bind 0.0.0.0:8000"
         },
@@ -60,6 +58,16 @@ def simple_config(app_name) -> dict:
             "envfile": ".env.prod",
         },
     }
+    if not Path(".python-version").exists():
+        config["python_version"] = "3.12"
+    pyproject_toml = Path("pyproject.toml")
+    if pyproject_toml.exists():
+        pyproject = tomllib.loads(pyproject_toml.read_text())
+        config["app"] = pyproject.get("project", {}).get("name", app_name)
+        if pyproject.get("project", {}).get("version"):
+            # fujin will read the version itself from the pyproject
+            config.pop("version")
+    return config
 
 
 def falco_config(app_name: str) -> dict:
@@ -80,3 +88,26 @@ def falco_config(app_name: str) -> dict:
         }
     )
     return config
+
+
+def binary_config(app_name: str) -> dict:
+    return {
+        "app": app_name,
+        "version": "0.0.1",
+        "build_command": "just build-bin",
+        "distfile": f"dist/bin/{app_name}-{{version}}",
+        "webserver": {
+            "upstream": "localhost:8000",
+            "type": "fujin.proxies.caddy",
+        },
+        "release_command": f"{app_name} migrate",
+        "installation_mode": InstallationMode.BINARY,
+        "processes": {"web": f"{app_name} prodserver"},
+        "aliases": {"shell": "server exec --appenv -i bash"},
+        "host": {
+            "ip": "127.0.0.1",
+            "user": "root",
+            "domain_name": f"{app_name}.com",
+            "envfile": ".env.prod",
+        },
+    }

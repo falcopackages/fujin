@@ -5,6 +5,7 @@ from typing import Annotated
 import cappa
 
 from fujin.commands import BaseCommand
+from fujin.config import InstallationMode
 
 
 @cappa.command(help="Run application-related tasks")
@@ -25,11 +26,12 @@ class App(BaseCommand):
                 "app_bin": self.config.app_bin,
                 "local_version": self.config.version,
                 "remote_version": remote_version,
-                "python_version": self.config.python_version,
                 "rollback_targets": ", ".join(rollback_targets.split("\n"))
                 if rollback_targets
                 else "N/A",
             }
+            if self.config.installation_mode == InstallationMode.PY_PACKAGE:
+                infos["python_version"] = self.config.python_version
             pm = self.create_process_manager(conn)
             services: dict[str, bool] = pm.is_active()
 
