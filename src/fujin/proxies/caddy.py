@@ -75,7 +75,7 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo systemctl daemon-reload")
         self.run_pty("sudo systemctl enable --now caddy-api")
         self.conn.run(
-            """curl --silent http://localhost:2019/config/ -d '{"apps":{"http": {"servers": {}}}}' -H 'Content-Type: application/json'"""
+            """curl --silent http://localhost:2019/config/ -d '{"apps":{"http": {"servers": {"srv0":{"listen":[":443"]}}}}}' -H 'Content-Type: application/json'"""
         )
 
     def uninstall(self):
@@ -86,51 +86,31 @@ class WebProxy(msgspec.Struct):
         self.run_pty("sudo userdel caddy")
 
     def setup(self):
-        config = (
+        current_config = json.loads(
+            self.conn.run(
+                "curl http://localhost:2019/config/apps/http/servers/srv0", hide=True
+            ).stdout.strip()
+        )
+        existing_routes: list[dict] = current_config.get("routes", [])
+        new_routes = [r for r in existing_routes if r.get("group") != self.app_name]
+        routes = (
             json.loads(self.config_file.read_text())
             if self.config_file.exists()
-            else self._get_config()
+            else self._get_routes()
         )
-        self.conn.run(f"echo '{json.dumps(config)}' > caddy.json")
+        new_routes.append(routes)
+        current_config["routes"] = new_routes
         self.conn.run(
-            f"curl localhost:2019/config/apps/http/servers/{self.app_name} -H 'Content-Type: application/json' -d @caddy.json"
-        )
-        # TODO: stop when received an {"error":"loading config: loading new config: http app module: start: listening on :443: listen tcp :443: bind: permission denied"}, not a 200 ok
-
-    def teardown(self):
-        self.conn.run(f"echo '{json.dumps({})}' > caddy.json")
-        self.conn.run(
-            f"curl localhost:2019/config/apps/http/servers/{self.app_name} -H 'Content-Type: application/json' -d @caddy.json"
+            f"curl localhost:2019/config/apps/http/servers/srv0 -H 'Content-Type: application/json' -d '{json.dumps(current_config)}'"
         )
 
-    def start(self) -> None:
-        self.run_pty("sudo systemctl start caddy-api")
-
-    def stop(self) -> None:
-        self.run_pty("sudo systemctl stop caddy-api")
-
-    def status(self) -> None:
-        self.run_pty("sudo systemctl status caddy-api", warn=True)
-
-    def restart(self) -> None:
-        self.run_pty("sudo systemctl restart caddy-api")
-
-    def logs(self) -> None:
-        self.run_pty(f"sudo journalctl -u caddy-api -f", warn=True)
-
-    def export_config(self) -> None:
-        self.config_file.write_text(json.dumps(self._get_config()))
-
-    def _get_config(self) -> dict:
+    def _get_routes(self) -> dict:
         handle = []
-        config = {
-            "listen": [":443"],
-            "routes": [
-                {
-                    "match": [{"host": [self.domain_name]}],
-                    "handle": handle,
-                }
-            ],
+        routes = {
+            "group": self.app_name,
+            "match": [{"host": [self.domain_name]}],
+            "terminal": True,
+            "handle": handle,
         }
         reverse_proxy = {
             "handler": "reverse_proxy",
@@ -138,14 +118,14 @@ class WebProxy(msgspec.Struct):
         }
         if not self.statics:
             handle.append(reverse_proxy)
-            return config
-        routes = []
-        handle.append({"handler": "subroute", "routes": routes})
+            return routes
+        sub_routes = []
+        handle.append({"handler": "subroute", "routes": sub_routes})
         for path, directory in self.statics.items():
             strip_path_prefix = path.replace("/*", "")
             if strip_path_prefix.endswith("/"):
                 strip_path_prefix = strip_path_prefix[:-1]
-            routes.append(
+            sub_routes.append(
                 {
                     "handle": [
                         {
@@ -173,8 +153,39 @@ class WebProxy(msgspec.Struct):
                     "match": [{"path": [path]}],
                 }
             )
-        routes.append({"handle": [reverse_proxy]})
-        return config
+        sub_routes.append({"handle": [reverse_proxy]})
+        return routes
+
+    def teardown(self):
+        current_config = json.loads(
+            self.conn.run(
+                "curl http://localhost:2019/config/apps/http/servers/srv0"
+            ).stdout.strip()
+        )
+        existing_routes: list[dict] = current_config.get("routes", [])
+        new_routes = [r for r in existing_routes if r.get("group") != self.app_name]
+        current_config["routes"] = new_routes
+        self.conn.run(
+            f"curl localhost:2019/config/apps/http/servers/srv0 -H 'Content-Type: application/json' -d '{json.dumps(current_config)}'"
+        )
+
+    def start(self) -> None:
+        self.run_pty("sudo systemctl start caddy-api")
+
+    def stop(self) -> None:
+        self.run_pty("sudo systemctl stop caddy-api")
+
+    def status(self) -> None:
+        self.run_pty("sudo systemctl status caddy-api", warn=True)
+
+    def restart(self) -> None:
+        self.run_pty("sudo systemctl restart caddy-api")
+
+    def logs(self) -> None:
+        self.run_pty(f"sudo journalctl -u caddy-api -f", warn=True)
+
+    def export_config(self) -> None:
+        self.config_file.write_text(json.dumps(self._get_routes()))
 
 
 def get_latest_gh_tag() -> str:
