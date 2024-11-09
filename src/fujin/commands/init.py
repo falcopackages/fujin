@@ -81,6 +81,10 @@ def falco_config(app_name: str) -> dict:
                 "web": f".venv/bin/{config['app']} prodserver",
                 "worker": f".venv/bin/{config['app']} qcluster",
             },
+            "webserver": {
+                "upstream": "localhost:8000",
+                "type": "fujin.proxies.caddy",
+            },
             "aliases": {
                 "console": "app exec -i shell_plus",
                 "dbconsole": "app exec -i dbshell",
@@ -99,12 +103,12 @@ def binary_config(app_name: str) -> dict:
         "build_command": "just build-bin",
         "distfile": f"dist/bin/{app_name}-{{version}}",
         "webserver": {
-            "upstream": f"unix//run/{app_name}.sock",
+            "upstream": "localhost:8000",
             "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.BINARY,
-        "processes": {"web": f"{app_name} prodserver --host unix//run/{app_name}.sock"},
+        "processes": {"web": f"{app_name} prodserver"},
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
             "ip": "127.0.0.1",

@@ -28,6 +28,13 @@ distfile
 Path to your project's distribution file. This should be the main artifact containing everything needed to run your project on the server.
 Supports version placeholder, e.g., ``dist/app_name-{version}-py3-none-any.whl``
 
+installation_mode
+-----------------
+
+Indicates whether the ``distfile`` is a Python package or a self-contained executable. The possible values are ``python-package`` and ``binary``.
+The ``binary`` option disables specific Python-related features, such as virtual environment creation and requirements installation. ``fujin`` will assume the provided
+``distfile`` already contains all the necessary dependencies to run your program.
+
 release_command
 ---------------
 Optional command to run at the end of deployment (e.g., database migrations).

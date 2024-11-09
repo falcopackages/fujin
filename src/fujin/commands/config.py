@@ -16,13 +16,14 @@ class ConfigCMD(BaseCommand):
             "app": self.config.app_name,
             "app_bin": self.config.app_bin,
             "version": self.config.version,
-            "python_version": self.config.python_version,
             "build_command": self.config.build_command,
             "release_command": self.config.release_command,
+            "installation_mode": self.config.installation_mode,
             "distfile": self.config.distfile,
-            "requirements": self.config.requirements,
             "webserver": f"{{ upstream = '{self.config.webserver.upstream}', type = '{self.config.webserver.type}' }}",
         }
+        if self.config.python_version:
+            general_config["python_version"] = self.config.python_version
         general_config_text = "\n".join(
             f"[bold green]{key}:[/bold green] {value}"
             for key, value in general_config.items()
