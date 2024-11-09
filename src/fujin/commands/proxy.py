@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
+from rich.prompt import Confirm
 
 from fujin.commands import BaseCommand
 
@@ -13,11 +14,21 @@ class Proxy(BaseCommand):
     def install(self):
         with self.connection() as conn:
             self.create_web_proxy(conn).install()
+        self.stdout.output("[green]Proxy installed successfully![/green]")
 
     @cappa.command(help="Uninstall the proxy from the remote host")
     def uninstall(self):
+        try:
+            confirm = Confirm.ask(
+                f"[red]Uninstalling the proxy will remove all current configurations. Are you sure you want to proceed?"
+            )
+        except KeyboardInterrupt:
+            raise cappa.Exit("Teardown aborted", code=0)
+        if not confirm:
+            return
         with self.connection() as conn:
             self.create_web_proxy(conn).uninstall()
+        self.stdout.output("[green]Proxy uninstalled successfully![/green]")
 
     @cappa.command(help="Start the proxy on the remote host")
     def start(self):
