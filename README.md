@@ -9,6 +9,8 @@
 > [!IMPORTANT]
 > This package currently contains minimal features and is a work-in-progress
 
+<!-- content:start -->
+
 `fujin` is a simple deployment tool that helps you get your project up and running on a VPS in a few minutes. It manages your app processes using `systemd` and runs your apps behind [caddy](https://caddyserver.com/). For Python projects, 
 it expects your app to be a packaged Python application ideally with a CLI entry point defined. For other languages, you need to provide a self-contained single executable file with all necessary dependencies.
 The main job of `fujin` is to bootstrap your server (installing caddy, etc.), copy the files onto the server with a structure that supports rollback, and automatically generate configs for systemd and caddy that you can manually edit if needed.
@@ -36,3 +38,5 @@ Fujin draws inspiration from the following tools for their developer experience.
 ## License
 
 `fujin` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+
+<!-- content:end -->
