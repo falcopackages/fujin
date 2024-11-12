@@ -22,17 +22,14 @@ web = ".venv/bin/gunicorn bookstore.wsgi:application --access-logfile - --error-
 worker = ".venv/bin/bookstore db_worker"
 
 [host]
-ip = "127.0.0.1"
-domain_name = "bookstore.localhost.dev"
+domain_name = "localhost"
 envfile = ".env.prod"
 user = "vagrant"
-key_filename = "/home/tobi/Builds/falcopackages/fujin/.vagrant/machines/default/virtualbox/private_key"
+key_filename = "../../../.vagrant/machines/default/virtualbox/private_key"
 ssh_port = 2222
 
 #[host]
-#ip = "aws-ec2"
 #domain_name = "test.oluwatobi.dev"
 #envfile = ".env.prod"
-#user = "ubuntu"
-#key_filename = "../../../aws.pem"
+#user = "fujin"
 

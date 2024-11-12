@@ -69,7 +69,7 @@ class WebProxy(msgspec.Struct):
 
             if not cert_exists:
                 self.conn.run(
-                    f"certbot --nginx -d {self.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
+                    f"sudo certbot --nginx -d {self.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
                 )
                 self.config_file.parent.mkdir(exist_ok=True)
                 self.conn.get(
@@ -109,9 +109,9 @@ class WebProxy(msgspec.Struct):
         static_locations = ""
         for path, directory in self.statics.items():
             static_locations += f"""
-        location {path} {{
-            alias {directory};
-        }}
+    location {path} {{
+        alias {directory};
+    }}
         """
 
         return f"""
