@@ -102,7 +102,7 @@ Host Configuration
 ip
 ~~
 The IP address or anything that resolves to the remote host IP's. This is use to communicate via ssh with the server, if omitted it's value will default to the one of the ``domain_name``.
- 
+
 domain_name
 ~~~~~~~~~~~
 The domain name pointing to this host. Used for web proxy configuration.

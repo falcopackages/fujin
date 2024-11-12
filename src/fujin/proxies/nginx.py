@@ -35,20 +35,20 @@ class WebProxy(msgspec.Struct):
         )
 
     def run_pty(self, *args, **kwargs):
-        return self.conn.run(*args, **kwargs, pty=True)
+        return self.run_pty(*args, **kwargs, pty=True)
 
     def install(self):
-        self.conn.run(
+        self.run_pty(
             "sudo apt install -y nginx libpq-dev python3-dev python3-certbot-nginx"
         )
 
     def uninstall(self):
         self.stop()
-        self.conn.run("sudo apt remove -y nginx")
-        self.conn.run(f"sudo rm /etc/nginx/sites-available/{self.app_name}.conf")
-        self.conn.run(f"sudo rm /etc/nginx/sites-enabled/{self.app_name}.conf")
-        self.conn.run("sudo systemctl disable certbot.timer")
-        self.conn.run("sudo apt remove -y python3-certbot-nginx")
+        self.run_pty("sudo apt remove -y nginx")
+        self.run_pty(f"sudo rm /etc/nginx/sites-available/{self.app_name}.conf")
+        self.run_pty(f"sudo rm /etc/nginx/sites-enabled/{self.app_name}.conf")
+        self.run_pty("sudo systemctl disable certbot.timer")
+        self.run_pty("sudo apt remove -y python3-certbot-nginx")
 
     def setup(self):
         conf = (
@@ -65,10 +65,10 @@ class WebProxy(msgspec.Struct):
         )
         if CERTBOT_EMAIL:
             cert_path = f"/etc/letsencrypt/live/{self.domain_name}/fullchain.pem"
-            cert_exists = self.conn.run(f"sudo test -f {cert_path}", warn=True).ok
+            cert_exists = self.run_pty(f"sudo test -f {cert_path}", warn=True).ok
 
             if not cert_exists:
-                self.conn.run(
+                self.run_pty(
                     f"sudo certbot --nginx -d {self.domain_name} --non-interactive --agree-tos --email {CERTBOT_EMAIL} --redirect"
                 )
                 self.config_file.parent.mkdir(exist_ok=True)
@@ -83,9 +83,7 @@ class WebProxy(msgspec.Struct):
     def teardown(self):
         self.run_pty(f"sudo rm /etc/nginx/sites-available/{self.app_name}.conf")
         self.run_pty(f"sudo rm /etc/nginx/sites-enabled/{self.app_name}.conf")
-        self.run_pty(
-            "sudo systemctl restart nginx",
-        )
+        self.run_pty("sudo systemctl restart nginx")
 
     def start(self) -> None:
         self.run_pty("sudo systemctl start nginx")
