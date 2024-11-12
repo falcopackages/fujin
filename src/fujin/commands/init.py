@@ -54,7 +54,6 @@ def simple_config(app_name) -> dict:
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
-            "ip": "127.0.0.1",
             "user": "root",
             "domain_name": f"{app_name}.com",
             "envfile": ".env.prod",
@@ -111,7 +110,6 @@ def binary_config(app_name: str) -> dict:
         "processes": {"web": f"{app_name} prodserver"},
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
-            "ip": "127.0.0.1",
             "user": "root",
             "domain_name": f"{app_name}.com",
             "envfile": ".env.prod",

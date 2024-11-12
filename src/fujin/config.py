@@ -101,8 +101,8 @@ Host Configuration
 
 ip
 ~~
-The IP address or hostname of the remote host.
-
+The IP address or anything that resolves to the remote host IP's. This is use to communicate via ssh with the server, if omitted it's value will default to the one of the ``domain_name``.
+ 
 domain_name
 ~~~~~~~~~~~
 The domain name pointing to this host. Used for web proxy configuration.
@@ -234,7 +234,7 @@ class Config(msgspec.Struct, kw_only=True):
 
 
 class HostConfig(msgspec.Struct, kw_only=True):
-    ip: str
+    ip: str | None = None
     domain_name: str
     user: str
     _envfile: str = msgspec.field(name="envfile")
@@ -245,6 +245,7 @@ class HostConfig(msgspec.Struct, kw_only=True):
 
     def __post_init__(self):
         self.apps_dir = f"/home/{self.user}/{self.apps_dir}"
+        self.ip = self.ip or self.domain_name
 
     def to_dict(self):
         d = {f: getattr(self, f) for f in self.__struct_fields__}
