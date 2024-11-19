@@ -4,23 +4,22 @@ Tutorial
 First, make sure you follow the `installation </installation.html>`_ instructions and have the ``fujin`` command available globally in your shell.
 ``fujin`` allows you to interact with your remote server and your deployed apps from your local shell.
 
-
 Prerequisites
---------------
+-------------
 
 Linux Box
 *********
 
 ``fujin`` has no strict requirements on the virtual private server (VPS) you choose, apart from the fact that it must be running a recent version of Ubuntu or a Debian-based system.
-I've mainly run my tests with various versions of Ubuntu: 20.04, 22.04, and 24.04. Other than that, use the best option for your app or the cheapest option you can find. Make sure you 
+I've mainly run my tests with various versions of Ubuntu: 20.04, 22.04, and 24.04. Other than that, use the best option for your app or the cheapest option you can find and make sure you 
 have root access to the server.
-
 
 Domain name
 ***********
 
-You can get one from a popular registrars like `namecheap <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_. If you're only using this for testing, you can use
-`sslip <https://sslip.io/>`_.
+You can get one from popular registrars like `namecheap <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_. If you just need something to test this tutorial, you can use
+`sslip <https://sslip.io/>`_, which is what I'll be using here.
+
 If you've bought a new domain, create an **A record** to point to the server IP address.
 
 Python package
@@ -29,7 +28,6 @@ Python package
 .. note::
 
     If you are deploying a binary or self-contained executable, skip to the `next section </tutorial.html#binary>`_
-
 
 Project Setup
 *************
@@ -41,15 +39,16 @@ Let's start by installing and initializing a simple Django project.
 
 .. code-block:: shell
 
-    uv tool install django # this will give you access to the django-admin command globally on your system
+    uv tool install django
     django-admin startproject bookstore
     cd bookstore
     uv init --package .
     uv add django gunicorn
 
 The ``uv init --package`` command makes your project mostly ready to be used with ``fujin``. It initializes a `packaged application <https://docs.astral.sh/uv/concepts/projects/#packaged-applications>`_ using uv,
-meaning the app can be packaged and distributed via PyPI, for example, and defines an entry point, which are the two requirements of ``fujin``.
-This is the content you'll get in the ``pyproject.toml`` file, with the important parts highlighted.
+meaning the app can be packaged and distributed (e.g: via PyPI) and defines an entry point, which are the two requirements of ``fujin``.
+
+This is the content you'll get in the ``pyproject.toml`` file, with the relevant parts highlighted.
 
 .. code-block:: toml
     :linenos:
@@ -82,10 +81,10 @@ This means that if our app is installed (either with ``pip install`` or ``uv too
 .. note::
 
     If you are installing it in a virtual environment, then there will be a file ``.venv/bin/bookstore`` that will run this CLI entry point. This is what ``fujin`` expects internally.
-    When it deploys your Python project, it sets up and installs a virtual environment in the app directory in a .venv folder and expects this entry point to be able to run
+    When it deploys your Python project, it sets up and installs a virtual environment in the app directory in a ``.venv`` folder and expects this entry point to be able to run
     commands with the ``fujin app exec <command>`` command.
 
-Currently, our entry point will run a main function in the ``src/bookstore/__init__.py`` file. Let's change that.
+Currently, our entry point will run the main function in the ``src/bookstore/__init__.py`` file. Let's change that.
 
 .. code-block:: shell
 
@@ -94,7 +93,7 @@ Currently, our entry point will run a main function in the ``src/bookstore/__ini
 
 We first remove the ``src`` folder, as we won't use that since our Django project will reside in the top-level ``bookstore`` folder. I also recommend keeping all
 your Django code in that folder, including new apps, as this makes things easier for packaging purposes.
-With the next command, you are now able to do this:
+Then we move the ``manage.py`` file to the ``bookstore`` folder and rename it to ``__main__.py``. This enables us to do this:
 
 .. code-block:: shell
 
@@ -167,7 +166,9 @@ Update the host section; it should look something like this, but with your serve
     user = "root"
     envfile = ".env.prod"
 
-We are using sslip.io as the domain name, if you bougth one make sure to use it here.
+.. caution::
+    
+    Make sure to replace ``SERVER_IP`` with the actual IP address of your server.
 
 Create a ``.env.prod`` file at the root of your project; it can be an empty file for now. The only requirement is that the file should exist.
 Update your ``bookstore/settings.py`` with the changes below:
@@ -181,7 +182,7 @@ Update your ``bookstore/settings.py`` with the changes below:
 
 With the current setup, we should already be able to deploy our app with the ``fujin up`` command, but static files won't work. Let's make some changes.
 
-Update``bookstore/settings.py`` with the changes below:
+Update ``bookstore/settings.py`` with the changes below:
 
 .. code-block:: python
     :linenos:
@@ -264,12 +265,10 @@ Now update the ``fujin.toml`` file with the changes below:
     
     Make sure to replace ``SERVER_IP`` with the actual IP address of your server.
 
-We are using sslip.io as the domain name, if you bougth one make sure to use it here.
-
 Create User
 -----------
 
-Currently we have the user set to **root** in our ``fujin.toml`` file and ``fujin`` might work with the root user, but I've noticed some issues with it, so I highly recommend creating a custom user.
+Currently, we have the user set to **root** in our ``fujin.toml`` file and ``fujin`` might work with the root user, but I've noticed some issues with it, so I highly recommend creating a custom user.
 For that, you'll need the root user with SSH access set up on the server.
 Then you'll run the command ``fujin server create-user`` with the username you want to use. You can, for example, use **fujin** as the username.
 For example:
@@ -288,7 +287,6 @@ Now update the ``fujin.toml`` file with the new user:
     domain_name = "SERVER_IP.sslip.io"
     user = "fujin"
     envfile = ".env.prod"
-
 
 Deploy
 ------
@@ -330,11 +328,10 @@ FAQ
 ---
 
 What about my database?
-***********************
+************************
 
-I'm currently using SQLite for my side projects, so this isn't really an issue for me at the moment. That's why ``fujin`` does not currently help in
-any fashion regarding this aspect. But remember, you can still at any time SSH into your server and do what you want, so nothing is stopping you from manually
-installing PostgreSQL or any other database or services you might want to use.
-With that said, I'd still like to have the configuration for any major extra tools like Redis or a database being managed by fujin when possible.
-That's why I'm planning to implement a way to declare containers via the ``fujin.toml`` file to add additional tools needed for the app. These containers will be managed with ``podman``—podman because it is rootless and daemonless, which means unless you need these
-extra services, podman won't eat any resources on your server. To keep track of the development of this feature, subscribe to this `issue <https://github.com/falcopackages/fujin/issues/17>`_.
+I'm currently using SQLite for my side projects, so this isn't an issue for me at the moment. That's why ``fujin`` does not currently assist with databases. 
+However, you can still SSH into your server and manually install PostgreSQL or any other database or services you need.
+
+I plan to add support for managing additional tools like Redis or databases by declaring containers via the ``fujin.toml`` file. These containers will be managed with ``podman``, 
+To follow the development of this feature, subscribe to this `issue <https://github.com/falcopackages/fujin/issues/17>`_.
