@@ -250,6 +250,49 @@ Now move to the `deploy </tutorial.html#deploy>`_ for the next step.
 Binary
 ------
 
+This mode is intended for self contained executable, for example with languages lke Golang, Rust that can be compiled into single file that is shipped to the server,
+and you can get a similar feature in python with tool like `pyapp <https://github.com/ofek/pyapp>`_ and `plex <https://github.com/pex-tool/pex>`_.
+For this tutorial we will use a `pocketbase <https://github.com/pocketbase/pocketbase>`_ a go backend that can be run as a standalone app.
+
+.. code-block:: shell
+
+    mkdir pocketbase
+    cd pocketbase
+    touch .env.prod
+    curl -LO https://github.com/pocketbase/pocketbase/releases/download/v0.22.26/pocketbase_0.22.26_linux_amd64.zip
+    fujin init --profile binary
+
+With the instructions above we will download a version of pocket to run on linux from their github release, and initailaze a new fujin configuration in ``binary`` mode.
+Now update the ``fujin.toml`` file with the changes below:
+
+.. code-block:: toml
+    :linenos:
+    :emphasize-lines:2,4,5
+
+    app = "pocketbase"
+    version = "0.22.26"
+    build_command = "unzip pocketbase_0.22.26_linux_amd64.zip"
+    distfile = "pocketbase"
+    release_command = "pocketbase migrate"
+    installation_mode = "binary"
+
+    [webserver]
+    upstream = "localhost:8090"
+    type = "fujin.proxies.caddy"
+
+    [processes]
+    web = "pocketbase serve --http 0.0.0.0:8090"
+
+    [aliases]
+    shell = "server exec --appenv -i bash"
+
+    [host]
+    domain_name = "52.0.56.137.sslip.io"
+    user = "fujin"
+    envfile = ".env.prod"
+
+Now you are ready to deploy
+
 Deploy
 ------
 
