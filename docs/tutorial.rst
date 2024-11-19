@@ -1,8 +1,7 @@
-
 Tutorial
 ========
 
-First make sure you follow the `installation </installation.html>`_ instructions and have the ``fujin`` command available globally in your shell.
+First, make sure you follow the `installation </installation.html>`_ instructions and have the ``fujin`` command available globally in your shell.
 ``fujin`` allows you to interact with your remote server and your deployed apps from your local shell.
 
 
@@ -11,17 +10,17 @@ Prerequisites
 
 .. note::
 
-    In this section I describe stuff that need you to have a project with a ``fujin.toml``, the next two section ``Python package`` and ``Binary`` show how to get one
-    so you''l need to read back this section after initslizing the projects.
+    In this section, I describe some steps that need you to have a project with a ``fujin.toml`` file. The next two sections, ``Python package`` and ``Binary``, show how to create one,
+    so you'll need to refer back to this section after initializing the projects.
 
 Linux Box
 *********
 
-``fujin`` has no hard requirements on the virtual private server you choose (VPS) apart from the fact it must be running a recent version of ubuntu or a debian based system.
-I've mainly run my test with various version of ubuntu, 20.04, 22.04 and 24.04. Other than that use what the best option for your app, or the cheapest option you can find.
+``fujin`` has no strict requirements on the virtual private server (VPS) you choose, apart from the fact that it must be running a recent version of Ubuntu or a Debian-based system.
+I've mainly run my tests with various versions of Ubuntu: 20.04, 22.04, and 24.04. Other than that, use the best option for your app or the cheapest option you can find.
 
-You also need root ssh access to the server and a custom user. ``fujin`` might work with the root but I've notice some issues with it so I highly recommend creating a custom user.
-For that you'll need firs the root user with an ssy access setup to the server. You'll have to change the  initial configuration in the ``fujin.toml`` file to look like this:
+You also need root SSH access to the server and a custom user. ``fujin`` might work with the root user, but I've noticed some issues with it, so I highly recommend creating a custom user.
+For that, you'll need the root user with SSH access set up on the server. You'll have to change the initial configuration in the ``fujin.toml`` file to look like this:
 
 .. code-block:: toml
 
@@ -32,23 +31,23 @@ For that you'll need firs the root user with an ssy access setup to the server. 
 
 .. caution::
     
-    Make sure to replace ``SERVER_IP`` with the actual ip address of your server.
+    Make sure to replace ``SERVER_IP`` with the actual IP address of your server.
 
-Then you'll run the the command ``fujin server create-user`` with the username you want to user, you can for example use **fujin** as the username.
-for example
+Then you'll run the command ``fujin server create-user`` with the username you want to use. You can, for example, use **fujin** as the username.
+For example:
 
 .. code-block:: shell
 
     fujin server create-user fujin
 
 This will create a new **fujin** user on your server, add it to the ``sudo`` group with the option to run all commands without having to type a password, and will
-copy the authoried key from the **root** to your new user so that the ssh setup you made for the root user still work with this new one.
+copy the authorized key from the **root** to your new user so that the SSH setup you made for the root user still works with this new one.
 
 Domain name
 ***********
 
-You can get one from a popular register like `namecheat <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_ for if your re only using thing for testing you can use
-`sslip <https://sslip.io/>`_. Example of what it will look like in the ``fujin.toml`` file assuming your server ip address is ``SERVER_IP``
+You can get one from a popular registrar like `namecheap <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_. If you're only using this for testing, you can use
+`sslip <https://sslip.io/>`_. Example of what it will look like in the ``fujin.toml``:
 
 .. code-block:: toml
 
@@ -56,30 +55,29 @@ You can get one from a popular register like `namecheat <https://www.namecheap.c
     domain_name = "SERVER_IP.sslip.io"
     ...
 
-If you've bough a new domain, make sure you created an **A record** to point to the server IP address, with a sslip.io you don't do that.
+If you've bought a new domain, make sure you create an **A record** to point to the server IP address. With sslip.io, you don't need to do that.
 
 .. tip::
 
-    You don't need to specify both the ``ip`` and ``domain_name`` key, when the ``ip`` is missing ``fujin`` will use the domain to connect
-    connect to the server.
+    When you have a ``domain_name`` that map to your server you don't need to specify the ``ip`` anymore, When the ``ip`` is missing, ``fujin`` will use the domain to connect to the server.
 
 Python package
 --------------
 
 .. note::
 
-    If you are deploying a binary or self contained executable skip to the `next section </tutorial.html#binary>`_
+    If you are deploying a binary or self-contained executable, skip to the `next section </tutorial.html#binary>`_
 
 
 Project Setup
 *************
 
-If you are deploying a python project with ``fujin``, you need your project to package and ideally having an entry point. We will be using django as an examples here, but the same step
-can be applied to any other python project and you can find examples with more framework in the `examples <https://github.com/falcopackages/fujin/tree/main/examples/>`_ folder on github.
+If you are deploying a Python project with ``fujin``, you need your project to be packaged and ideally have an entry point. We will be using Django as an example here, but the same steps
+can be applied to any other Python project, and you can find examples with more frameworks in the `examples <https://github.com/falcopackages/fujin/tree/main/examples/>`_ folder on GitHub.
 
-Let's start by installing and initliaying a simple django project.
+Let's start by installing and initializing a simple Django project.
 
-.. code-block:: toml
+.. code-block:: shell
 
     uv tool install django # this will give you access to the django-admin command globally on your system
     django-admin startproject bookstore
@@ -87,9 +85,9 @@ Let's start by installing and initliaying a simple django project.
     uv init --package .
     uv add django gunicorn
 
-The ``uv init`` command make your project mostly ready to be used with fujin. It inilaized a `packaged application <https://docs.astral.sh/uv/concepts/projects/#packaged-applications>`_ using uv,
-meaning the app can can be package and distribute via pypi for an example and define an entry point, which are the two requirements of ``fujin``.
-This is the content you'll get in the  ``pyproject.toml`` file, the imported part have being highlighted.
+The ``uv init`` command makes your project mostly ready to be used with fujin. It initializes a `packaged application <https://docs.astral.sh/uv/concepts/projects/#packaged-applications>`_ using uv,
+meaning the app can be packaged and distributed via PyPI, for example, and defines an entry point, which are the two requirements of ``fujin``.
+This is the content you'll get in the ``pyproject.toml`` file, with the important parts highlighted.
 
 .. code-block:: toml
     :linenos:
@@ -116,37 +114,38 @@ This is the content you'll get in the  ``pyproject.toml`` file, the imported par
     requires = ["hatchling"]
     build-backend = "hatchling.build"
 
-The ``build-system`` section is what allows us to build our project into a wheel file (python package format) and the ``project.scripts`` defines a cli entry point for our app.
-This mean that if our app is installed there (either with ``pip install`` or ``uv tool install`` for example) there will be ``bookstore`` available globally on our system to run the project.
+The ``build-system`` section is what allows us to build our project into a wheel file (Python package format), and the ``project.scripts`` defines a CLI entry point for our app.
+This means that if our app is installed (either with ``pip install`` or ``uv tool install``, for example), there will be a ``bookstore`` command available globally on our system to run the project.
 
 .. note::
 
-    If you installing it in a virtual envirnomment then there will be a file ``.venv/bin/bookstore`` that will run this cli entry point. This is what ``fujin`` expect internally.
-    When it deployed your python project it setup and  install a virtuaenv environnmen in the app directory in a .venv folder and expect this entry point to be able to run
-    command with the ``fujin app exec <command>`` command.
+    If you are installing it in a virtual environment, then there will be a file ``.venv/bin/bookstore`` that will run this CLI entry point. This is what ``fujin`` expects internally.
+    When it deploys your Python project, it sets up and installs a virtual environment in the app directory in a .venv folder and expects this entry point to be able to run
+    commands with the ``fujin app exec <command>`` command.
 
-Currently our entry point will run a main function in the ``src/bookstore/__init__.py`` file, let's change that.
+Currently, our entry point will run a main function in the ``src/bookstore/__init__.py`` file. Let's change that.
 
 .. code-block:: shell
 
     rm -r src
     mv manage.py bookstore/__main__.py
 
-With first remove the ``src`` folder, we won't use that since our django project will reside in the top level ``bookstore`` folder, I also recommend keeping all
-you django code in that folder, including new apps, this make things easier for packaging purpose.
-We the next command you are now able to do this:
+We first remove the ``src`` folder, as we won't use that since our Django project will reside in the top-level ``bookstore`` folder. I also recommend keeping all
+your Django code in that folder, including new apps, as this makes things easier for packaging purposes.
+With the next command, you are now able to do this:
 
 .. code-block:: shell
+
     uv run bookstore migrate # equivalent to python manage.py migrate if we kept the manage.py file
 
-Now to finisu update the ``scripts`` section your ``pyproject.toml`` file.
+Now to finish, update the ``scripts`` section in your ``pyproject.toml`` file.
 
 .. code-block:: toml
 
     [project.scripts]
-    bookstore = "bookstore.__main__.py:main"
+    bookstore = "bookstore.__main__:main"
 
-Now the cli that will be install with your project will do the job of the ``manage.py`` file, to test this out, run the following command
+Now the CLI that will be installed with your project will do the job of the ``manage.py`` file. To test this out, run the following commands:
 
 .. code-block:: shell
 
@@ -158,20 +157,20 @@ Now the cli that will be install with your project will do the job of the ``mana
 .. admonition:: falco
     :class: tip dropdown
 
-    If you want a django will all this pre requesistes in place chekcout `falco <https://github.com/falcopackages/falco-cli>`_.
-    It also automatically provide a ``start_app`` command that moves the app in the right folder.
+    If you want a Django project with all these prerequisites in place, check out `falco <https://github.com/falcopackages/falco-cli>`_.
+    It also automatically provides a ``start_app`` command that moves the app to the right folder.
 
 fujin init
 **********
 
-Now that our project is ready run, at the root of it run ``fujin init``
+Now that our project is ready, run ``fujin init`` at the root of it.
 
 .. admonition:: falco
     :class: tip dropdown
 
-    In a falco project run ``fujin init --profile falco``
+    In a falco project, run ``fujin init --profile falco``
 
-Here what you'll get
+Here's what you'll get:
 
 .. code-block:: toml
 
@@ -197,7 +196,7 @@ Here what you'll get
     domain_name = "bookstore.com"
     envfile = ".env.prod"
 
-Update the host section, it should look something like this, but with yours server IP
+Update the host section; it should look something like this, but with your server IP:
 
 .. code-block:: toml
 
@@ -206,8 +205,8 @@ Update the host section, it should look something like this, but with yours serv
     user = "fujin"
     envfile = ".env.prod"
 
-Create a the root of you project a ``.env.prod``, it can be empty file for now, the only requirements is that the file should exists.
-Update your the ``booking/settings.py`` with the changes below:
+Create a ``.env.prod`` file at the root of your project; it can be an empty file for now. The only requirement is that the file should exist.
+Update your ``bookstore/settings.py`` with the changes below:
 
 .. code-block:: python
 
@@ -216,8 +215,8 @@ Update your the ``booking/settings.py`` with the changes below:
 
     ALLOWED_HOSTS = ["SERVER_IP.sslip.io"]
 
-With the current setup we should already be able to deploy our app with the ``fujin up`` command, but staticfiles won't work, let's make some changes,
-first in ``booking/settings.py`` add the line below:
+With the current setup, we should already be able to deploy our app with the ``fujin up`` command, but static files won't work. Let's make some changes.
+First, in ``bookstore/settings.py``, add the line below:
 
 .. code-block:: python
     :linenos:
@@ -227,9 +226,9 @@ first in ``booking/settings.py`` add the line below:
     STATIC_URL = "static/"
     STATIC_ROOT = "./staticfiles"
 
-The last lines means that when the ``collectstatic`` command is run, the files will be place in a **staticfiles** directory in the current dir.
-Now let's update the ``fujin.toml`` file to run ``collectstatic`` before the app is started and move these files in the folder where our web server
-can read it
+The last line means that when the ``collectstatic`` command is run, the files will be placed in a **staticfiles** directory in the current directory.
+Now let's update the ``fujin.toml`` file to run ``collectstatic`` before the app is started and move these files to the folder where our web server
+can read them:
 
 .. code-block:: toml
 
@@ -243,20 +242,20 @@ can read it
 
 .. note::
 
-    If your server have a version of rsync that does not have the ``--mkpath`` option, you can run update the rsync part like to create the folder beforahand
+    If your server has a version of rsync that does not have the ``--mkpath`` option, you can update the rsync part to create the folder beforehand:
 
     .. code-block:: text
 
         && sudo mkdir -p /var/www/bookstore/static/ && sudo rsync -a --delete staticfiles/ /var/www/bookstore/static/"
 
-Now move to the `deploy </tutorial.html#deploy>`_ for the next step.
+Now move to the `deploy </tutorial.html#deploy>`_ section for the next step.
 
 Binary
 ------
 
-This mode is intended for self contained executable, for example with languages lke Golang, Rust that can be compiled into single file that is shipped to the server,
-and you can get a similar feature in python with tool like `pyapp <https://github.com/ofek/pyapp>`_ and `plex <https://github.com/pex-tool/pex>`_.
-For this tutorial we will use a `pocketbase <https://github.com/pocketbase/pocketbase>`_ a go backend that can be run as a standalone app.
+This mode is intended for self-contained executables, for example, with languages like Golang or Rust that can be compiled into a single file that is shipped to the server.
+You can get a similar feature in Python with tools like `pyapp <https://github.com/ofek/pyapp>`_ and `pex <https://github.com/pex-tool/pex>`_.
+For this tutorial, we will use `pocketbase <https://github.com/pocketbase/pocketbase>`_, a Go backend that can be run as a standalone app.
 
 .. code-block:: shell
 
@@ -266,7 +265,7 @@ For this tutorial we will use a `pocketbase <https://github.com/pocketbase/pocke
     curl -LO https://github.com/pocketbase/pocketbase/releases/download/v0.22.26/pocketbase_0.22.26_linux_amd64.zip
     fujin init --profile binary
 
-With the instructions above we will download a version of pocket to run on linux from their github release, and initailaze a new fujin configuration in ``binary`` mode.
+With the instructions above, we will download a version of Pocketbase to run on Linux from their GitHub release and initialize a new fujin configuration in ``binary`` mode.
 Now update the ``fujin.toml`` file with the changes below:
 
 .. code-block:: toml
@@ -295,26 +294,26 @@ Now update the ``fujin.toml`` file with the changes below:
     user = "fujin"
     envfile = ".env.prod"
 
-Now you are ready to deploy
+Now you are ready to deploy.
 
 Deploy
 ------
 
-Now that your project is ready run the commands below to deploy for the first time
+Now that your project is ready, run the commands below to deploy for the first time:
 
 .. code-block:: shell
 
     fujin up
 
-The first time the process can take a few minutes, at the end of it you should have a link to your deployed app.
+The first time, the process can take a few minutes. At the end of it, you should have a link to your deployed app.
 A few notable commands:
 
 .. code-block:: shell
-    :caption: Deploy an app on a host where a fujin has already being setup
+    :caption: Deploy an app on a host where fujin has already been set up
 
     fujin deploy
 
-You also use the ``deploy`` commands when you have change fujin config or exported configs:
+You also use the ``deploy`` command when you have changed the fujin config or exported configs:
 
 .. code-block:: shell
     :caption: Export the systemd config being used so that you can edit them
@@ -322,11 +321,11 @@ You also use the ``deploy`` commands when you have change fujin config or export
     fujin app export-config
 
 .. code-block:: shell
-    :caption: Export the webserver config, in this case caddy
+    :caption: Export the webserver config, in this case, caddy
 
     fujin proxy export-config
 
-and the command you''ll proably be running the most
+and the command you'll probably be running the most:
 
 .. code-block:: shell
     :caption: When you've only made code and envfile related changes
@@ -336,13 +335,12 @@ and the command you''ll proably be running the most
 FAQ
 ---
 
-What about my database ?
-************************
+What about my database?
+***********************
 
-I'm currently rocking with sqlite for my side projects, so this isn't really an issue for me at the moment, that's why fujin does not currently help in
-any fashion regarding this aspect. But remember, you can still at any time ssh into your server and do what you want, so nothing stopping you from manually
-installing postgres or any other database or services you might want to use. With that said I'll still like to have the configuration for any major extra tool
-like a redis or cache being managed by fujin when possible. That's why I'm planning to implement a way to declare containers via the ``fujin.toml`` file to add
-additionals tool needed for the app. These containers will be managed with ``podman``, podman because it is a rootless and daemonless which mean unless you need these
-extra services podamn won't need any ressource on your server. To keep track of the development of this feature subscribe to this `issue <https://github.com/falcopackages/fujin/issues/17>`_.
-
+I'm currently using SQLite for my side projects, so this isn't really an issue for me at the moment. That's why ``fujin`` does not currently help in
+any fashion regarding this aspect.`But remember, you can still at any time SSH into your server and do what you want, so nothing is stopping you from manually
+installing PostgreSQL or any other database or services you might want to use. 
+With that said, I'd still like to have the configuration for any major extra tools like Redis or a database being managed by fujin when possible.
+That's why I'm planning to implement a way to declare containers via the ``fujin.toml`` file to add additional tools needed for the app. These containers will be managed with ``podman``—podman because it is rootless and daemonless, which means unless you need these
+extra services, podman won't eat any resources on your server. To keep track of the development of this feature, subscribe to this `issue <https://github.com/falcopackages/fujin/issues/17>`_.
