@@ -26,9 +26,13 @@ For that you'll need firs the root user with an ssy access setup to the server. 
 .. code-block:: toml
 
     [host]
-    ip = "52.0.56.137"
+    ip = "SERVER_IP"
     user = "root"
     ....
+
+.. caution::
+    
+    Make sure to replace ``SERVER_IP`` with the actual ip address of your server.
 
 Then you'll run the the command ``fujin server create-user`` with the username you want to user, you can for example use **fujin** as the username.
 for example
@@ -44,12 +48,12 @@ Domain name
 ***********
 
 You can get one from a popular register like `namecheat <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_ for if your re only using thing for testing you can use
-`sslip <https://sslip.io/>`_. Example of what it will look like in the ``fujin.toml`` file assuming your server ip address is ``52.0.56.137``
+`sslip <https://sslip.io/>`_. Example of what it will look like in the ``fujin.toml`` file assuming your server ip address is ``SERVER_IP``
 
 .. code-block:: toml
 
     [host]
-    domain_name = "52.0.56.137.sslip.io"
+    domain_name = "SERVER_IP.sslip.io"
     ...
 
 If you've bough a new domain, make sure you created an **A record** to point to the server IP address, with a sslip.io you don't do that.
@@ -198,7 +202,7 @@ Update the host section, it should look something like this, but with yours serv
 .. code-block:: toml
 
     [host]
-    domain_name = "52.0.56.137.sslip.io"
+    domain_name = "SERVER_IP.sslip.io"
     user = "fujin"
     envfile = ".env.prod"
 
@@ -210,7 +214,7 @@ Update your the ``booking/settings.py`` with the changes below:
     # SECURITY WARNING: don't run with debug turned on in production!
     DEBUG = False
 
-    ALLOWED_HOSTS = ["52.0.56.137.sslip.io"]
+    ALLOWED_HOSTS = ["SERVER_IP.sslip.io"]
 
 With the current setup we should already be able to deploy our app with the ``fujin up`` command, but staticfiles won't work, let's make some changes,
 first in ``booking/settings.py`` add the line below:
@@ -267,7 +271,7 @@ Now update the ``fujin.toml`` file with the changes below:
 
 .. code-block:: toml
     :linenos:
-    :emphasize-lines:2,4,5
+    :emphasize-lines: 2-5,9,13,19-21
 
     app = "pocketbase"
     version = "0.22.26"
@@ -287,7 +291,7 @@ Now update the ``fujin.toml`` file with the changes below:
     shell = "server exec --appenv -i bash"
 
     [host]
-    domain_name = "52.0.56.137.sslip.io"
+    domain_name = "SERVER_IP.sslip.io"
     user = "fujin"
     envfile = ".env.prod"
 
