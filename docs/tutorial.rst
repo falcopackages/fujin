@@ -8,58 +8,20 @@ First, make sure you follow the `installation </installation.html>`_ instruction
 Prerequisites
 --------------
 
-.. note::
-
-    In this section, I describe some steps that need you to have a project with a ``fujin.toml`` file. The next two sections, ``Python package`` and ``Binary``, show how to create one,
-    so you'll need to refer back to this section after initializing the projects.
-
 Linux Box
 *********
 
 ``fujin`` has no strict requirements on the virtual private server (VPS) you choose, apart from the fact that it must be running a recent version of Ubuntu or a Debian-based system.
-I've mainly run my tests with various versions of Ubuntu: 20.04, 22.04, and 24.04. Other than that, use the best option for your app or the cheapest option you can find.
+I've mainly run my tests with various versions of Ubuntu: 20.04, 22.04, and 24.04. Other than that, use the best option for your app or the cheapest option you can find. Make sure you 
+have root access to the server.
 
-You also need root SSH access to the server and a custom user. ``fujin`` might work with the root user, but I've noticed some issues with it, so I highly recommend creating a custom user.
-For that, you'll need the root user with SSH access set up on the server. You'll have to change the initial configuration in the ``fujin.toml`` file to look like this:
-
-.. code-block:: toml
-
-    [host]
-    ip = "SERVER_IP"
-    user = "root"
-    ....
-
-.. caution::
-    
-    Make sure to replace ``SERVER_IP`` with the actual IP address of your server.
-
-Then you'll run the command ``fujin server create-user`` with the username you want to use. You can, for example, use **fujin** as the username.
-For example:
-
-.. code-block:: shell
-
-    fujin server create-user fujin
-
-This will create a new **fujin** user on your server, add it to the ``sudo`` group with the option to run all commands without having to type a password, and will
-copy the authorized key from the **root** to your new user so that the SSH setup you made for the root user still works with this new one.
 
 Domain name
 ***********
 
-You can get one from a popular registrar like `namecheap <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_. If you're only using this for testing, you can use
-`sslip <https://sslip.io/>`_. Example of what it will look like in the ``fujin.toml``:
-
-.. code-block:: toml
-
-    [host]
-    domain_name = "SERVER_IP.sslip.io"
-    ...
-
-If you've bought a new domain, make sure you create an **A record** to point to the server IP address. With sslip.io, you don't need to do that.
-
-.. tip::
-
-    When you have a ``domain_name`` that map to your server you don't need to specify the ``ip`` anymore, When the ``ip`` is missing, ``fujin`` will use the domain to connect to the server.
+You can get one from a popular registrars like `namecheap <https://www.namecheap.com/>`_ or `godaddy <https://www.godaddy.com>`_. If you're only using this for testing, you can use
+`sslip <https://sslip.io/>`_.
+If you've bought a new domain, create an **A record** to point to the server IP address.
 
 Python package
 --------------
@@ -85,7 +47,7 @@ Let's start by installing and initializing a simple Django project.
     uv init --package .
     uv add django gunicorn
 
-The ``uv init`` command makes your project mostly ready to be used with fujin. It initializes a `packaged application <https://docs.astral.sh/uv/concepts/projects/#packaged-applications>`_ using uv,
+The ``uv init --package`` command makes your project mostly ready to be used with ``fujin``. It initializes a `packaged application <https://docs.astral.sh/uv/concepts/projects/#packaged-applications>`_ using uv,
 meaning the app can be packaged and distributed via PyPI, for example, and defines an entry point, which are the two requirements of ``fujin``.
 This is the content you'll get in the ``pyproject.toml`` file, with the important parts highlighted.
 
@@ -202,8 +164,10 @@ Update the host section; it should look something like this, but with your serve
 
     [host]
     domain_name = "SERVER_IP.sslip.io"
-    user = "fujin"
+    user = "root"
     envfile = ".env.prod"
+
+We are using sslip.io as the domain name, if you bougth one make sure to use it here.
 
 Create a ``.env.prod`` file at the root of your project; it can be an empty file for now. The only requirement is that the file should exist.
 Update your ``bookstore/settings.py`` with the changes below:
@@ -216,7 +180,8 @@ Update your ``bookstore/settings.py`` with the changes below:
     ALLOWED_HOSTS = ["SERVER_IP.sslip.io"]
 
 With the current setup, we should already be able to deploy our app with the ``fujin up`` command, but static files won't work. Let's make some changes.
-First, in ``bookstore/settings.py``, add the line below:
+
+Update``bookstore/settings.py`` with the changes below:
 
 .. code-block:: python
     :linenos:
@@ -227,6 +192,7 @@ First, in ``bookstore/settings.py``, add the line below:
     STATIC_ROOT = "./staticfiles"
 
 The last line means that when the ``collectstatic`` command is run, the files will be placed in a **staticfiles** directory in the current directory.
+
 Now let's update the ``fujin.toml`` file to run ``collectstatic`` before the app is started and move these files to the folder where our web server
 can read them:
 
@@ -248,7 +214,7 @@ can read them:
 
         && sudo mkdir -p /var/www/bookstore/static/ && sudo rsync -a --delete staticfiles/ /var/www/bookstore/static/"
 
-Now move to the `deploy </tutorial.html#deploy>`_ section for the next step.
+Now move to the `create user </tutorial.html#create-user>`_ section for the next step.
 
 Binary
 ------
@@ -291,10 +257,38 @@ Now update the ``fujin.toml`` file with the changes below:
 
     [host]
     domain_name = "SERVER_IP.sslip.io"
+    user = "root"
+    envfile = ".env.prod"
+
+.. caution::
+    
+    Make sure to replace ``SERVER_IP`` with the actual IP address of your server.
+
+We are using sslip.io as the domain name, if you bougth one make sure to use it here.
+
+Create User
+-----------
+
+Currently we have the user set to **root** in our ``fujin.toml`` file and ``fujin`` might work with the root user, but I've noticed some issues with it, so I highly recommend creating a custom user.
+For that, you'll need the root user with SSH access set up on the server.
+Then you'll run the command ``fujin server create-user`` with the username you want to use. You can, for example, use **fujin** as the username.
+For example:
+
+.. code-block:: shell
+
+    fujin server create-user fujin
+
+This will create a new **fujin** user on your server, add it to the ``sudo`` group with the option to run all commands without having to type a password, and will
+copy the authorized key from the **root** to your new user so that the SSH setup you made for the root user still works with this new one.
+Now update the ``fujin.toml`` file with the new user:
+
+.. code-block:: toml
+
+    [host]
+    domain_name = "SERVER_IP.sslip.io"
     user = "fujin"
     envfile = ".env.prod"
 
-Now you are ready to deploy.
 
 Deploy
 ------
@@ -339,8 +333,8 @@ What about my database?
 ***********************
 
 I'm currently using SQLite for my side projects, so this isn't really an issue for me at the moment. That's why ``fujin`` does not currently help in
-any fashion regarding this aspect.`But remember, you can still at any time SSH into your server and do what you want, so nothing is stopping you from manually
-installing PostgreSQL or any other database or services you might want to use. 
+any fashion regarding this aspect. But remember, you can still at any time SSH into your server and do what you want, so nothing is stopping you from manually
+installing PostgreSQL or any other database or services you might want to use.
 With that said, I'd still like to have the configuration for any major extra tools like Redis or a database being managed by fujin when possible.
 That's why I'm planning to implement a way to declare containers via the ``fujin.toml`` file to add additional tools needed for the app. These containers will be managed with ``podman``—podman because it is rootless and daemonless, which means unless you need these
 extra services, podman won't eat any resources on your server. To keep track of the development of this feature, subscribe to this `issue <https://github.com/falcopackages/fujin/issues/17>`_.
