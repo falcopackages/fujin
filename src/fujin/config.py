@@ -181,6 +181,15 @@ class InstallationMode(StrEnum):
     BINARY = "binary"
 
 
+class SecretAdapter(StrEnum):
+    BITWARDEN = "bitwarden"
+
+
+class SecretConfig(msgspec.Struct):
+    adapter: SecretAdapter
+    password_env: str | None = None
+
+
 class Config(msgspec.Struct, kw_only=True):
     app_name: str = msgspec.field(name="app")
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
@@ -198,6 +207,7 @@ class Config(msgspec.Struct, kw_only=True):
     requirements: str | None = None
     hooks: HooksDict = msgspec.field(default_factory=dict)
     local_config_dir: Path = Path(".fujin")
+    secret_config: SecretConfig | None = msgspec.field(name="secrets", default=None)
 
     def __post_init__(self):
         if self.installation_mode == InstallationMode.PY_PACKAGE:
