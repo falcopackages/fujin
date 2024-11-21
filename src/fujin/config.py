@@ -162,7 +162,6 @@ from __future__ import annotations
 
 import os
 import sys
-from functools import cached_property
 from pathlib import Path
 
 import msgspec
