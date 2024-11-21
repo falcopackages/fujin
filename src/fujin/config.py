@@ -183,6 +183,7 @@ class InstallationMode(StrEnum):
 
 class SecretAdapter(StrEnum):
     BITWARDEN = "bitwarden"
+    ONE_PASSWORD = "1password"
 
 
 class SecretConfig(msgspec.Struct):

@@ -7,7 +7,7 @@ from dotenv import dotenv_values
 
 from fujin.config import SecretConfig, SecretAdapter
 from .bitwarden import BwAdapter
-
+from .onepassword import OPAdapter
 import gevent
 
 
@@ -23,7 +23,8 @@ class AdapterImpl(Protocol):
 
 
 adapter_to_class: dict[SecretAdapter, AdapterImpl] = {
-    SecretAdapter.BITWARDEN: BwAdapter
+    SecretAdapter.BITWARDEN: BwAdapter,
+    SecretAdapter.ONE_PASSWORD: OPAdapter,
 }
 
 

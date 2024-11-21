@@ -6,7 +6,7 @@ build_command = "uv build && uv pip compile pyproject.toml -o requirements.txt"
 release_command = "bookstore migrate && bookstore collectstatic --no-input && sudo mkdir -p /var/www/bookstore/static/ && sudo rsync  -a --delete staticfiles/ /var/www/bookstore/static/"
 distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 installation_mode = "python-package"
-secrets = {adapter = "bitwarden", password_env = "BW_PASSWORD"}
+secrets = {adapter = "1password", password_env = "BW_PASSWORD"}
 
 [webserver]
 upstream = "unix//run/bookstore.sock"
