@@ -281,6 +281,7 @@ class HostConfig(msgspec.Struct, kw_only=True):
 class Webserver(msgspec.Struct):
     upstream: str
     type: str = "fujin.proxies.caddy"
+    certbot_email: str | None = None
     statics: dict[str, str] = msgspec.field(default_factory=dict)
 
 
