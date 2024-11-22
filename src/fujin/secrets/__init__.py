@@ -27,6 +27,6 @@ def patch_secrets(envfile: Path, secret_config: SecretConfig) -> str:
     with adapter_context(secret_config) as secret_reader:
         for key, secret in secrets.items():
             parsed_secrets[key] = gevent.spawn(secret_reader, secret[1:])
-    gevent.joinall(parsed_secrets.values())
+        gevent.joinall(parsed_secrets.values())
     env_dict.update({key: thread.value for key, thread in parsed_secrets.items()})
     return "\n".join(f'{key}="{value}"' for key, value in env_dict.items())
