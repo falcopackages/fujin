@@ -19,7 +19,7 @@ adapter_to_context: dict[SecretAdapter, secret_adapter_context] = {
 }
 
 
-def patch_secrets(envfile: Path, secret_config: SecretConfig) -> str:
+def resolve_secrets(envfile: Path, secret_config: SecretConfig) -> str:
     env_dict = dotenv_values(envfile)
     secrets = {key: value for key, value in env_dict.items() if value.startswith("$")}
     adapter_context = adapter_to_context[secret_config.adapter]

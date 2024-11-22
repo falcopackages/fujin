@@ -43,6 +43,23 @@ release_command
 ---------------
 Optional command to run at the end of deployment (e.g., database migrations).
 
+secrets
+-------
+
+Optional secrets configuration. If set, Fujin will load secrets from the specified secret management service.
+Check out the `secrets </secrets.html>`_ page for more information.
+
+adapter
+~~~~~~~
+The secret management service to use. Available options:
+
+- ``bitwarden``
+- ``1password``
+
+password_env
+~~~~~~~~~~~~
+Environment variable containing the password for the service account. This is only required for certain adapters.
+
 Webserver
 ---------
 

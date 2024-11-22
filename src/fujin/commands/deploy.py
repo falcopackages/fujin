@@ -7,7 +7,7 @@ import cappa
 
 from fujin.commands import BaseCommand
 from fujin.config import InstallationMode
-from fujin.secrets import patch_secrets
+from fujin.secrets import resolve_secrets
 from fujin.connection import Connection
 
 
@@ -56,7 +56,7 @@ class Deploy(BaseCommand):
             raise cappa.Exit(f"{self.config.host.envfile} not found", code=1)
         if self.config.secret_config:
             self.stdout.output("[blue]Reading secrets....[/blue]")
-            return patch_secrets(self.config.host.envfile, self.config.secret_config)
+            return resolve_secrets(self.config.host.envfile, self.config.secret_config)
         return self.config.host.envfile.read_text()
 
     def transfer_files(
