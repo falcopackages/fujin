@@ -2,25 +2,25 @@ from __future__ import annotations
 import cappa
 
 
-import msgspec
-
 from fujin.config import SecretConfig
 import subprocess
 
+from contextlib import contextmanager
+from typing import Generator, TYPE_CHECKING
 
-class OPAdapter(msgspec.Struct, kw_only=True):
-    @classmethod
-    def create(cls, _: SecretConfig) -> BwAdapter:
-        return cls()
+if TYPE_CHECKING:
+    from . import secret_reader
 
-    def open(self) -> None:
-        pass
 
-    def read_secret(self, name) -> str:
+@contextmanager
+def one_password(_: SecretConfig) -> Generator[secret_reader, None, None]:
+    def read_secret(name: str) -> str:
         result = subprocess.run(["op", "read", name], capture_output=True, text=True)
         if result.returncode != 0:
             raise cappa.Exit(result.stderr)
         return result.stdout.strip()
 
-    def close(self) -> None:
+    try:
+        yield read_secret
+    finally:
         pass
