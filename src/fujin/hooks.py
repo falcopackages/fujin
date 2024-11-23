@@ -10,7 +10,6 @@ try:
 except ImportError:
     from enum import Enum
 
-
     class StrEnum(str, Enum):
         pass
 
@@ -48,6 +47,7 @@ class HookManager:
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
             if result.returncode != 0:
                 raise cappa.Exit(result.stderr)
+            rich_print(result.stdout)
 
     def pre_build(self) -> None:
         self._run_hook(Hook.PRE_BUILD)
