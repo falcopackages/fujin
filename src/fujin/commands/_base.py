@@ -35,7 +35,11 @@ class BaseCommand:
 
     @cached_property
     def hook_manager(self) -> HookManager:
-        return HookManager(hooks=self.config.hooks, app_name=self.config.app_name)
+        return HookManager(
+            hooks=self.config.hooks,
+            app_name=self.config.app_name,
+            local_config_dir=self.config.local_config_dir,
+        )
 
     @contextmanager
     def connection(self):

@@ -1,5 +1,6 @@
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 import cappa
 from rich import print as rich_print
@@ -23,10 +24,23 @@ class Hook(StrEnum):
 HooksDict = dict[Hook, str]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class HookManager:
     app_name: str
     hooks: HooksDict
+    local_config_dir: Path
+
+    def __post_init__(self):
+        if self.hooks:
+            return
+        hooks_folder = self.local_config_dir / "hooks"
+        if not hooks_folder.exists():
+            return
+        self.hooks = {
+            h.value: f"./{hooks_folder / h.value}"  # noqa
+            for h in Hook
+            if (hooks_folder / h.value).exists()  # noqa
+        }
 
     def _run_hook(self, type_: Hook) -> None:
         if cmd := self.hooks.get(type_):
