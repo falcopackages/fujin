@@ -59,6 +59,9 @@ dev = [
   "fastapi>=0.115.3",
   "git-cliff>=2.6.1",
   "litestar>=2.12.1",
+  "pytest>=8.0.0",
+  "pytest-cov>=4.1.0",
+  "pytest-mock>=3.12.0",
 ]
 docs = [
   "myst-parser",
@@ -185,7 +188,6 @@ search = '__version__ = "{current_version}"'
 check_untyped_defs = true
 exclude = [
   "docs",
-  "tests",
   "migrations",
   "venv",
   ".venv",
@@ -202,9 +204,15 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 ignore_errors = true
 module = [
-  "tests.*",
   "docs.*",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--cov=fujin --cov-report=term-missing"
 
 [tool.uv.workspace]
 members = [

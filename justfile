@@ -51,6 +51,9 @@ fujin *ARGS:
 @docs-requirements:
     uv export --no-hashes --group docs --format requirements-txt > docs/requirements.txt
 
+@test:
+    uv run pytest
+
 # -------------------------------------------------------------------------
 # RELEASE UTILITIES
 #---------------------------------------------------------------------------
