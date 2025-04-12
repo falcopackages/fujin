@@ -39,9 +39,9 @@ classifiers = [
 
 dependencies = [
   "cappa>=0.24",
-  "fabric>=3.2.2",
   "gevent[recommended]>=24.11.1",
   "msgspec[toml]>=0.18.6",
+  "parallel-ssh>=2.14.0",
   "python-dotenv>=1.0.1",
   "rich>=13.9.2",
 ]

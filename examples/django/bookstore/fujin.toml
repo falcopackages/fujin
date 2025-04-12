@@ -22,11 +22,11 @@ web = ".venv/bin/gunicorn bookstore.wsgi:application --access-logfile - --error-
 worker = ".venv/bin/bookstore db_worker"
 
 [host]
-domain_name = "localhost"
+domain_name = "bookstore.oluwatobi.dev"
 envfile = ".env.prod"
-user = "vagrant"
-key_filename = "../../../.vagrant/machines/default/virtualbox/private_key"
-ssh_port = 2222
+user = "tobi"
+#key_filename = "../../../.vagrant/machines/default/virtualbox/private_key"
+#ssh_port = 2222
 
 #[host]
 #domain_name = "test.oluwatobi.dev"

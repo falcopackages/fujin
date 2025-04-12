@@ -14,11 +14,14 @@ class Server(BaseCommand):
     @cappa.command(help="Display information about the host system")
     def info(self):
         with self.connection() as conn:
-            result = conn.run(f"command -v fastfetch", warn=True, hide=True)
-            if result.ok:
-                conn.run("fastfetch", pty=True)
-            else:
-                self.stdout.output(conn.run("cat /etc/os-release", hide=True).stdout)
+            result = conn.run(f"/home/tobi/.local/bin/fastfetch", warn=True, hide=False, pty=False)
+            # print(result)
+            for line in result.stdout:
+                print(line)
+            # if result.ok:
+            #     conn.run("fastfetch", pty=True)
+            # else:
+            #     self.stdout.output(conn.run("cat /etc/os-release", hide=True).stdout)
 
     @cappa.command(help="Setup uv, web proxy, and install necessary dependencies")
     def bootstrap(self):
