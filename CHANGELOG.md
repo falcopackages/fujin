@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] - 2025-11-16
+
+### 🐛 Bug Fixes
+
+- Dummy proxy config
+
+### 🚜 Refactor
+
+- Use custom caddy server name
+- Less files
+
 ## [0.12.1] - 2025-03-12
 
 ### 🐛 Bug Fixes
