@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
+import gevent
 from rich.prompt import Confirm
 
 from fujin.commands import BaseCommand
@@ -33,13 +34,33 @@ class Down(BaseCommand):
         if not confirm:
             return
         with self.connection() as conn:
-            process_manager = self.create_process_manager(conn)
             conn.run(f"rm -rf {self.app_dir}")
-            self.create_web_proxy(conn).teardown()
-            process_manager.uninstall_services()
-            process_manager.reload_configuration()
-            if self.full:
-                self.create_web_proxy(conn).uninstall()
+            proxy = self.create_web_proxy(conn)
+            if proxy:
+                proxy.teardown()
+
+            service_names = self.config.service_names
+            # Stop services
+            threads = [
+                gevent.spawn(conn.run, f"sudo systemctl stop {name}", warn=True)
+                for name in service_names
+            ]
+            gevent.joinall(threads)
+            # Disable services
+            threads = [
+                gevent.spawn(conn.run, f"sudo systemctl disable {name}", warn=True)
+                for name in service_names
+            ]
+            gevent.joinall(threads)
+            # Remove service files
+            for name in service_names:
+                conn.run(f"sudo rm /etc/systemd/system/{name}", warn=True)
+
+            conn.run("sudo systemctl daemon-reload")
+            conn.run("sudo systemctl reset-failed")
+
+            if self.full and proxy:
+                proxy.uninstall()
             self.stdout.output(
                 "[green]Project teardown completed successfully![/green]"
             )

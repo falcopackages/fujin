@@ -27,7 +27,16 @@ class Init(BaseCommand):
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
 
-        self.scaffold_config()
+        config_dir = Path(".fujin")
+        config_dir.mkdir(exist_ok=True)
+        systemd_dir = config_dir / "systemd"
+        systemd_dir.mkdir(exist_ok=True)
+
+        templates_folder = (
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+        )
+        for file in templates_folder.iterdir():
+            shutil.copy(file, config_dir / file.name)
 
         profile_to_func = {
             "simple": simple_config,
@@ -40,23 +49,6 @@ class Init(BaseCommand):
         self.stdout.output(
             "[green]Sample configuration file generated successfully![/green]"
         )
-
-    def scaffold_config(self):
-        config_dir = Path(".fujin")
-        config_dir.mkdir(exist_ok=True)
-        systemd_dir = config_dir / "systemd"
-        systemd_dir.mkdir(exist_ok=True)
-
-        templates_folder = (
-            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
-        )
-
-        shutil.copy(templates_folder / "Caddyfile.j2", config_dir / "Caddyfile.j2")
-        shutil.copy(templates_folder / "web.service.j2", systemd_dir / "web.service.j2")
-        shutil.copy(
-            templates_folder / "default.service.j2", systemd_dir / "default.service.j2"
-        )
-        shutil.copy(templates_folder / "web.socket.j2", systemd_dir / "web.socket.j2")
 
 
 def simple_config(app_name) -> dict:
@@ -103,7 +95,7 @@ def falco_config(app_name: str) -> dict:
             "release_command": f"{config['app']} setup",
             "processes": {
                 "web": {"command": f".venv/bin/{config['app']} prodserver"},
-                "worker": {"command": f".venv/bin/{config['app']} qcluster"},
+                "worker": {"command": f".venv/bin/{config['app']} db_worker"},
             },
             "webserver": {
                 "upstream": "localhost:8000",
@@ -117,15 +109,7 @@ def falco_config(app_name: str) -> dict:
             "host": {
                 "user": "root",
                 "domain_name": f"{app_name}.com",
-                "env": f"""DEBUG=False
-MEDIA_ROOT='~/.local/share/fujin/{app_name}/media'
-ALLOWED_HOSTS={app_name}.com
-SECRET_KEY=$SECRET_KEY
-DJANGO_SUPERUSER_EMAIL=$DJANGO_SUPERUSER_EMAIL
-DJANGO_SUPERUSER_PASSWORD=$DJANGO_SUPERUSER_PASSWORD
-DJANGO_SUPERUSER_USERNAME=$DJANGO_SUPERUSER_USERNAME
-DATABASE_URL=$DATABASE_URL
-""",
+                "envfile": ".env.prod",
             },
         }
     )

@@ -30,9 +30,10 @@ class Deploy(BaseCommand):
             with self.app_environment() as app_conn:
                 self.release(app_conn)
                 self.install_services(app_conn)
-                app_conn.run("sudo systemctl daemon-reload")
                 self.restart_services(app_conn)
-                proxy = self.create_web_proxy(app_conn)
+                self.create_web_proxy(app_conn).setup()
+                self.update_version_history(app_conn)
+                self.prune_assets(app_conn)
         self.hook_manager.post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
@@ -68,6 +69,12 @@ class Deploy(BaseCommand):
                         pty=True,
                     )
                 )
+        threads.append(
+            gevent.spawn(
+                conn.run,
+                "sudo systemctl daemon-reload",
+            )
+        )
         gevent.joinall(threads)
 
     def restart_services(self, conn: Connection) -> None:

@@ -28,7 +28,6 @@ class Redeploy(BaseCommand):
             deploy.install_project(conn, skip_setup=requirements_copied)
             deploy.release(conn)
             deploy.install_services(conn)
-            conn.run("sudo systemctl daemon-reload")
             deploy.restart_services(conn)
             deploy.update_version_history(conn)
         self.hook_manager.post_deploy()

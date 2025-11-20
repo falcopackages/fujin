@@ -321,8 +321,7 @@ class Config(msgspec.Struct, kw_only=True):
         return services
 
     def get_systemd_units(self) -> dict[str, str]:
-        search_paths = [self.local_config_dir / "systemd"]
-
+        search_paths = [self.local_config_dir]
         env = Environment(loader=FileSystemLoader(search_paths))
 
         context = {
@@ -355,6 +354,15 @@ class Config(msgspec.Struct, kw_only=True):
                 files[name] = body
 
         return files
+
+    def get_caddyfile(self) -> str:
+        search_paths = [self.local_config_dir]
+        env = Environment(loader=FileSystemLoader(search_paths))
+        template = env.get_template("Caddyfile.j2")
+        return template.render(
+            domain_name=self.host.domain_name,
+            upstream=self.webserver.upstream,
+        )
 
 
 class HostConfig(msgspec.Struct, kw_only=True):

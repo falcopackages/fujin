@@ -42,7 +42,7 @@ class Rollback(BaseCommand):
                 return
             deploy = Deploy()
             deploy.install_project(conn, version)
-            self.create_process_manager(conn).restart_services()
+            deploy.restart_services(conn)
             conn.run(f"rm -r {' '.join(f'v{v}' for v in versions_to_clean)}", warn=True)
             conn.run(f"sed -i '1,/{version}/{{/{version}/!d}}' .versions", warn=True)
             self.stdout.output(

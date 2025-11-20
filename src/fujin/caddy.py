@@ -2,11 +2,8 @@ from __future__ import annotations
 
 import json
 import urllib.request
-from pathlib import Path
 
 import msgspec
-from jinja2 import Template
-
 from fujin.config import Config
 from fujin.connection import Connection
 
@@ -21,24 +18,11 @@ GH_RELEASE_LATEST_URL = "https://api.github.com/repos/caddyserver/caddy/releases
 
 class Caddy(msgspec.Struct):
     conn: Connection
-    domain_name: str
-    app_name: str
-    upstream: str
-    local_config_dir: Path
-
-    @property
-    def config_file(self) -> Path:
-        return self.local_config_dir / "Caddyfile.j2"
+    config: Config
 
     @classmethod
     def create(cls, config: Config, conn: Connection) -> Caddy:
-        return cls(
-            conn=conn,
-            domain_name=config.host.domain_name,
-            upstream=config.webserver.upstream,
-            app_name=config.app_name,
-            local_config_dir=config.local_config_dir,
-        )
+        return cls(conn=conn, config=config)
 
     def run_pty(self, *args, **kwargs):
         return self.conn.run(*args, **kwargs, pty=True)
@@ -92,15 +76,9 @@ class Caddy(msgspec.Struct):
         self.run_pty("sudo rm -rf /etc/caddy")
 
     def setup(self):
-        content = self.config_file.read_text()
+        rendered_content = self.config.get_caddyfile()
 
-        # Render the template
-        template = Template(content)
-        rendered_content = template.render(
-            domain_name=self.domain_name, upstream=self.upstream
-        )
-
-        remote_path = f"/etc/caddy/conf.d/{self.app_name}.caddy"
+        remote_path = f"/etc/caddy/conf.d/{self.config.app_name}.caddy"
         self.conn.run(
             f"echo '{rendered_content}' | sudo tee {remote_path}",
             hide="out",
@@ -109,7 +87,7 @@ class Caddy(msgspec.Struct):
         self.reload()
 
     def teardown(self):
-        remote_path = f"/etc/caddy/conf.d/{self.app_name}.caddy"
+        remote_path = f"/etc/caddy/conf.d/{self.config.app_name}.caddy"
         self.run_pty(f"sudo rm {remote_path}", warn=True)
         self.reload()
 

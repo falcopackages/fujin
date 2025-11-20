@@ -170,27 +170,6 @@ class App(BaseCommand):
                     pty=True,
                 )
 
-    @cappa.command(
-        name="export-config",
-        help="Export the service configuration files locally to the .fujin directory",
-    )
-    def export_config(
-        self,
-        overwrite: Annotated[
-            bool, cappa.Arg(help="overwrite any existing config file")
-        ] = False,
-    ):
-        with self.connection() as conn:
-            for filename, content in self.config.get_systemd_units().items():
-                local_config = self.config.local_config_dir / filename
-                if local_config.exists() and not overwrite:
-                    self.stdout.output(
-                        f"[blue]Skipping {filename}, file already exists. Use --overwrite to replace it.[/blue]"
-                    )
-                    continue
-                local_config.write_text(content)
-                self.stdout.output(f"[green]{filename} exported successfully![/green]")
-
     def _resolve_service_names(self, name: str | None) -> list[str]:
         if not name:
             return self.config.service_names

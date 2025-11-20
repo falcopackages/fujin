@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Annotated
 
 import cappa
 from rich.prompt import Confirm
