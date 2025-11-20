@@ -10,7 +10,6 @@ from fujin.config import Config
 from fujin.connection import Connection
 from fujin.connection import host_connection
 from fujin.hooks import HookManager
-from fujin.systemd import ProcessManager
 
 
 @dataclass
@@ -56,6 +55,3 @@ class BaseCommand:
         if not self.config.webserver.enabled:
             return None
         return Caddy.create(conn=conn, config=self.config)
-
-    def create_process_manager(self, conn: Connection) -> ProcessManager:
-        return ProcessManager.create(conn=conn, config=self.config)

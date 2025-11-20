@@ -4,9 +4,10 @@ import subprocess
 from pathlib import Path
 
 import cappa
+import gevent
 
 from fujin.commands import BaseCommand
-from fujin.config import InstallationMode
+from fujin.config import InstallationMode, ProcessConfig
 from fujin.connection import Connection
 from fujin.secrets import resolve_secrets
 
@@ -21,7 +22,6 @@ class Deploy(BaseCommand):
         self.build_app()
         self.hook_manager.pre_deploy()
         with self.connection() as conn:
-            process_manager = self.create_process_manager(conn)
             conn.run(f"mkdir -p {self.app_dir}")
             conn.run(f"mkdir -p {self.versioned_assets_dir}")
             with conn.cd(self.app_dir):
@@ -29,19 +29,53 @@ class Deploy(BaseCommand):
                 self.install_project(conn)
             with self.app_environment() as app_conn:
                 self.release(app_conn)
-                process_manager.install_services()
-                process_manager.reload_configuration()
-                process_manager.restart_services()
+                self.install_services(app_conn)
+                app_conn.run("sudo systemctl daemon-reload")
+                self.restart_services(app_conn)
                 proxy = self.create_web_proxy(app_conn)
-                if proxy:
-                    proxy.setup()
-                self.update_version_history(app_conn)
-                self.prune_assets(app_conn)
         self.hook_manager.post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
         )
+
+    def install_services(self, conn: Connection) -> None:
+        units = self.config.get_systemd_units()
+        for filename, content in units.items():
+            conn.run(
+                f"echo '{content}' | sudo tee /etc/systemd/system/{filename}",
+                hide="out",
+                pty=True,
+            )
+
+        threads = []
+        for name in self.config.processes:
+            service_name = self.config.get_service_name(name)
+            config = self.config.processes[name]
+            if isinstance(config, ProcessConfig) and config.socket and name == "web":
+                threads.append(
+                    gevent.spawn(
+                        conn.run,
+                        f"sudo systemctl enable --now {self.config.app_name}.socket",
+                        pty=True,
+                    )
+                )
+            else:
+                threads.append(
+                    gevent.spawn(
+                        conn.run,
+                        f"sudo systemctl enable {service_name}",
+                        pty=True,
+                    )
+                )
+        gevent.joinall(threads)
+
+    def restart_services(self, conn: Connection) -> None:
+        threads = [
+            gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
+            for name in self.config.service_names
+        ]
+        gevent.joinall(threads)
 
     def build_app(self) -> None:
         try:

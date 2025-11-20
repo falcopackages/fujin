@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Annotated
 
 import cappa
+import gevent
+from rich.table import Table
+
 
 from fujin.commands import BaseCommand
-from fujin.config import InstallationMode
+from fujin.config import InstallationMode, ProcessConfig
 
 
 @cappa.command(help="Run application-related tasks")
@@ -26,28 +29,58 @@ class App(BaseCommand):
                 "app_bin": self.config.app_bin,
                 "local_version": self.config.version,
                 "remote_version": remote_version,
-                "rollback_targets": ", ".join(rollback_targets.split("\n"))
-                if rollback_targets
-                else "N/A",
+                "rollback_targets": (
+                    ", ".join(rollback_targets.split("\n"))
+                    if rollback_targets
+                    else "N/A"
+                ),
             }
             if self.config.installation_mode == InstallationMode.PY_PACKAGE:
                 infos["python_version"] = self.config.python_version
-            pm = self.create_process_manager(conn)
-            services: dict[str, bool] = pm.is_active()
+
+            services_status = self._get_services_status(conn)
+
+            services = {}
+            for process_name in self.config.processes:
+                service_names = self.config.get_process_service_names(process_name)
+                running_count = sum(
+                    1 for name in service_names if services_status.get(name, False)
+                )
+                total_count = len(service_names)
+
+                if total_count == 1:
+                    services[process_name] = services_status.get(
+                        service_names[0], False
+                    )
+                else:
+                    services[process_name] = f"{running_count}/{total_count}"
+
+            socket_name = f"{self.config.app_name}.socket"
+            if socket_name in services_status:
+                services["socket"] = services_status[socket_name]
 
         infos_text = "\n".join(f"{key}: {value}" for key, value in infos.items())
-        from rich.table import Table
 
         table = Table(title="", header_style="bold cyan")
-        table.add_column("Service", style="")
+        table.add_column("Process", style="")
         table.add_column("Running?")
-        for service, is_active in services.items():
-            table.add_row(
-                service,
-                "[bold green]Yes[/bold green]"
-                if is_active
-                else "[bold red]No[/bold red]",
-            )
+        for service, status in services.items():
+            if isinstance(status, bool):
+                status_str = (
+                    "[bold green]Yes[/bold green]"
+                    if status
+                    else "[bold red]No[/bold red]"
+                )
+            else:
+                running, total = map(int, status.split("/"))
+                if running == total:
+                    status_str = f"[bold green]{status}[/bold green]"
+                elif running == 0:
+                    status_str = f"[bold red]{status}[/bold red]"
+                else:
+                    status_str = f"[bold yellow]{status}[/bold yellow]"
+
+            table.add_row(service, status_str)
 
         self.stdout.output(infos_text)
         self.stdout.output(table)
@@ -76,7 +109,12 @@ class App(BaseCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.create_process_manager(conn).start_services(name)
+            names = self._resolve_service_names(name)
+            threads = [
+                gevent.spawn(conn.run, f"sudo systemctl start {name}", pty=True)
+                for name in names
+            ]
+            gevent.joinall(threads)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} started successfully![/green]")
 
@@ -90,7 +128,12 @@ class App(BaseCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.create_process_manager(conn).restart_services(name)
+            names = self._resolve_service_names(name)
+            threads = [
+                gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
+                for name in names
+            ]
+            gevent.joinall(threads)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} restarted successfully![/green]")
 
@@ -104,7 +147,12 @@ class App(BaseCommand):
         ] = None,
     ):
         with self.app_environment() as conn:
-            self.create_process_manager(conn).stop_services(name)
+            names = self._resolve_service_names(name)
+            threads = [
+                gevent.spawn(conn.run, f"sudo systemctl stop {name}", pty=True)
+                for name in names
+            ]
+            gevent.joinall(threads)
         msg = f"{name} Service" if name else "All Services"
         self.stdout.output(f"[green]{msg} stopped successfully![/green]")
 
@@ -114,7 +162,13 @@ class App(BaseCommand):
     ):
         # TODO: flash out this more
         with self.app_environment() as conn:
-            self.create_process_manager(conn).service_logs(name=name, follow=follow)
+            names = self._resolve_service_names(name)
+            if names:
+                conn.run(
+                    f"sudo journalctl -u {names[0]} {'-f' if follow else ''}",
+                    warn=True,
+                    pty=True,
+                )
 
     @cappa.command(
         name="export-config",
@@ -127,9 +181,7 @@ class App(BaseCommand):
         ] = False,
     ):
         with self.connection() as conn:
-            for filename, content in self.create_process_manager(
-                conn
-            ).get_configuration_files(ignore_local=True):
+            for filename, content in self.config.get_systemd_units().items():
                 local_config = self.config.local_config_dir / filename
                 if local_config.exists() and not overwrite:
                     self.stdout.output(
@@ -138,3 +190,34 @@ class App(BaseCommand):
                     continue
                 local_config.write_text(content)
                 self.stdout.output(f"[green]{filename} exported successfully![/green]")
+
+    def _resolve_service_names(self, name: str | None) -> list[str]:
+        if not name:
+            return self.config.service_names
+
+        if name in self.config.processes:
+            return self.config.get_process_service_names(name)
+
+        if name == "socket":
+            has_socket = any(config.socket for config in self.config.processes.values())
+            if has_socket:
+                return [f"{self.config.app_name}.socket"]
+
+        return [name]
+
+    def _get_services_status(self, conn) -> dict[str, bool]:
+        names = self.config.service_names
+        threads = {
+            name: gevent.spawn(
+                conn.run,
+                f"sudo systemctl is-active {name}",
+                warn=True,
+                hide=True,
+            )
+            for name in names
+        }
+        gevent.joinall(threads.values())
+        return {
+            name: thread.value.stdout.strip() == "active"
+            for name, thread in threads.items()
+        }

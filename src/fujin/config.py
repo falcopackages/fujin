@@ -201,11 +201,13 @@ Run custom scripts at specific points with hooks. Check out the `hooks </hooks.h
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from pathlib import Path
 
 import msgspec
+from jinja2 import Environment, FileSystemLoader
 
 from .errors import ImproperlyConfiguredError
 
@@ -234,6 +236,12 @@ class SecretConfig(msgspec.Struct):
     password_env: str | None = None
 
 
+class ProcessConfig(msgspec.Struct):
+    command: str
+    replicas: int = 1
+    socket: bool = False
+
+
 class Config(msgspec.Struct, kw_only=True):
     app_name: str = msgspec.field(name="app")
     version: str = msgspec.field(default_factory=lambda: read_version_from_pyproject())
@@ -245,7 +253,7 @@ class Config(msgspec.Struct, kw_only=True):
     distfile: str
     aliases: dict[str, str] = msgspec.field(default_factory=dict)
     host: HostConfig
-    processes: dict[str, str] = msgspec.field(default_factory=dict)
+    processes: dict[str, ProcessConfig] = msgspec.field(default_factory=dict)
     webserver: Webserver
     requirements: str | None = None
     hooks: HooksDict = msgspec.field(default_factory=dict)
@@ -286,6 +294,67 @@ class Config(msgspec.Struct, kw_only=True):
             return msgspec.toml.decode(fujin_toml.read_text(), type=cls)
         except msgspec.ValidationError as e:
             raise ImproperlyConfiguredError(f"Improperly configured, {e}") from e
+
+    def get_service_name(self, process_name: str) -> str:
+        config = self.processes[process_name]
+        suffix = "@.service" if config.replicas > 1 else ".service"
+        if process_name == "web":
+            return f"{self.app_name}{suffix}"
+        return f"{self.app_name}-{process_name}{suffix}"
+
+    def get_process_service_names(self, process_name: str) -> list[str]:
+        config = self.processes[process_name]
+        service_name = self.get_service_name(process_name)
+        if config.replicas > 1:
+            base = service_name.replace("@.service", "")
+            return [f"{base}@{i}.service" for i in range(1, config.replicas + 1)]
+        return [service_name]
+
+    @property
+    def service_names(self) -> list[str]:
+        services = []
+        for name in self.processes:
+            services.extend(self.get_process_service_names(name))
+        for name, config in self.processes.items():
+            if config.socket:
+                services.append(f"{self.app_name}.socket")
+        return services
+
+    def get_systemd_units(self) -> dict[str, str]:
+        search_paths = [self.local_config_dir / "systemd"]
+
+        env = Environment(loader=FileSystemLoader(search_paths))
+
+        context = {
+            "app_name": self.app_name,
+            "user": self.host.user,
+            "app_dir": self.host.get_app_dir(self.app_name),
+        }
+
+        files = {}
+        for name, config in self.processes.items():
+            template_name = "web.service.j2" if name == "web" else "default.service.j2"
+            service_name = self.get_service_name(name)
+
+            command = config.command
+            process_config = config
+
+            template = env.get_template(template_name)
+            body = template.render(
+                **context,
+                command=command,
+                process_name=service_name,
+                process=process_config,
+            )
+            files[service_name] = body
+
+            if process_config.socket:
+                name = f"{self.app_name}.socket"
+                template = env.get_template("web.socket.j2")
+                body = template.render(**context)
+                files[name] = body
+
+        return files
 
 
 class HostConfig(msgspec.Struct, kw_only=True):

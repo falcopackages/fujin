@@ -51,10 +51,12 @@ class Init(BaseCommand):
             Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
 
-        shutil.copy(templates_folder / "Caddyfile", config_dir / "Caddyfile")
-        shutil.copy(templates_folder / "web.service", systemd_dir / "web.service")
-        shutil.copy(templates_folder / "simple.service", systemd_dir / "simple.service")
-        shutil.copy(templates_folder / "web.socket", systemd_dir / "web.socket")
+        shutil.copy(templates_folder / "Caddyfile.j2", config_dir / "Caddyfile.j2")
+        shutil.copy(templates_folder / "web.service.j2", systemd_dir / "web.service.j2")
+        shutil.copy(
+            templates_folder / "default.service.j2", systemd_dir / "default.service.j2"
+        )
+        shutil.copy(templates_folder / "web.socket.j2", systemd_dir / "web.socket.j2")
 
 
 def simple_config(app_name) -> dict:
@@ -70,7 +72,10 @@ def simple_config(app_name) -> dict:
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.PY_PACKAGE,
         "processes": {
-            "web": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix//run/{app_name}.sock"
+            "web": {
+                "command": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix//run/{app_name}.sock",
+                "socket": True,
+            }
         },
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
@@ -97,8 +102,8 @@ def falco_config(app_name: str) -> dict:
         {
             "release_command": f"{config['app']} setup",
             "processes": {
-                "web": f".venv/bin/{config['app']} prodserver",
-                "worker": f".venv/bin/{config['app']} qcluster",
+                "web": {"command": f".venv/bin/{config['app']} prodserver"},
+                "worker": {"command": f".venv/bin/{config['app']} qcluster"},
             },
             "webserver": {
                 "upstream": "localhost:8000",
@@ -138,7 +143,7 @@ def binary_config(app_name: str) -> dict:
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.BINARY,
-        "processes": {"web": f"{app_name} prodserver"},
+        "processes": {"web": {"command": f"{app_name} prodserver"}},
         "aliases": {"shell": "server exec --appenv -i bash"},
         "host": {
             "user": "root",

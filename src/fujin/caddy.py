@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import urllib.request
 from pathlib import Path
-import importlib.util
 
 import msgspec
+from jinja2 import Template
 
 from fujin.config import Config
 from fujin.connection import Connection
@@ -28,7 +28,7 @@ class Caddy(msgspec.Struct):
 
     @property
     def config_file(self) -> Path:
-        return self.local_config_dir / "Caddyfile"
+        return self.local_config_dir / "Caddyfile.j2"
 
     @classmethod
     def create(cls, config: Config, conn: Connection) -> Caddy:
@@ -92,17 +92,11 @@ class Caddy(msgspec.Struct):
         self.run_pty("sudo rm -rf /etc/caddy")
 
     def setup(self):
-        if self.config_file.exists():
-            content = self.config_file.read_text()
-        else:
-            # Fallback to template if local file missing (though init should have created it)
-            templates_folder = (
-                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
-            )
-            content = (templates_folder / "Caddyfile").read_text()
+        content = self.config_file.read_text()
 
         # Render the template
-        rendered_content = content.format(
+        template = Template(content)
+        rendered_content = template.render(
             domain_name=self.domain_name, upstream=self.upstream
         )
 
