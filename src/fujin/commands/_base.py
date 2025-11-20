@@ -5,7 +5,6 @@ from typing import Generator
 
 import cappa
 
-from fujin.caddy import Caddy
 from fujin.config import Config
 from fujin.connection import Connection
 from fujin.connection import host_connection
@@ -51,7 +50,3 @@ class BaseCommand:
                 with conn.prefix("source .appenv"):
                     yield conn
 
-    def create_web_proxy(self, conn: Connection) -> Caddy | None:
-        if not self.config.webserver.enabled:
-            return None
-        return Caddy.create(conn=conn, config=self.config)

@@ -7,6 +7,7 @@ import cappa
 import gevent
 from rich.prompt import Confirm
 
+from fujin import caddy
 from fujin.commands import BaseCommand
 
 
@@ -35,9 +36,8 @@ class Down(BaseCommand):
             return
         with self.connection() as conn:
             conn.run(f"rm -rf {self.app_dir}")
-            proxy = self.create_web_proxy(conn)
-            if proxy:
-                proxy.teardown()
+            if self.config.webserver.enabled:
+                caddy.teardown(conn, self.config)
 
             service_names = self.config.service_names
             # Stop services
@@ -59,8 +59,8 @@ class Down(BaseCommand):
             conn.run("sudo systemctl daemon-reload")
             conn.run("sudo systemctl reset-failed")
 
-            if self.full and proxy:
-                proxy.uninstall()
+            if self.full and self.config.webserver.enabled:
+                caddy.uninstall(conn)
             self.stdout.output(
                 "[green]Project teardown completed successfully![/green]"
             )

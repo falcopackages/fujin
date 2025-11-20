@@ -6,6 +6,7 @@ from pathlib import Path
 import cappa
 import gevent
 
+from fujin import caddy
 from fujin.commands import BaseCommand
 from fujin.config import InstallationMode, ProcessConfig
 from fujin.connection import Connection
@@ -31,7 +32,8 @@ class Deploy(BaseCommand):
                 self.release(app_conn)
                 self.install_services(app_conn)
                 self.restart_services(app_conn)
-                self.create_web_proxy(app_conn).setup()
+                if self.config.webserver.enabled:
+                    caddy.setup(app_conn, self.config)
                 self.update_version_history(app_conn)
                 self.prune_assets(app_conn)
         self.hook_manager.post_deploy()

@@ -29,8 +29,6 @@ class Init(BaseCommand):
 
         config_dir = Path(".fujin")
         config_dir.mkdir(exist_ok=True)
-        systemd_dir = config_dir / "systemd"
-        systemd_dir.mkdir(exist_ok=True)
 
         templates_folder = (
             Path(importlib.util.find_spec("fujin").origin).parent / "templates"

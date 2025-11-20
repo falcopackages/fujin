@@ -15,7 +15,6 @@ from fujin.commands.deploy import Deploy
 from fujin.commands.docs import Docs
 from fujin.commands.down import Down
 from fujin.commands.init import Init
-from fujin.commands.proxy import Proxy
 from fujin.commands.prune import Prune
 from fujin.commands.redeploy import Redeploy
 from fujin.commands.rollback import Rollback
@@ -38,7 +37,6 @@ class Fujin:
         | Redeploy
         | App
         | Server
-        | Proxy
         | ConfigCMD
         | Docs
         | Down

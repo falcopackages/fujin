@@ -6,6 +6,7 @@ from typing import Annotated
 
 import cappa
 
+from fujin import caddy
 from fujin.commands import BaseCommand
 
 
@@ -30,9 +31,8 @@ class Server(BaseCommand):
                 conn.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
                 conn.run("uv tool update-shell")
             conn.run("uv tool install fastfetch-bin-edge")
-            proxy = self.create_web_proxy(conn)
-            if proxy:
-                proxy.install()
+            if self.config.webserver.enabled:
+                caddy.install(conn)
             self.stdout.output(
                 "[green]Server bootstrap completed successfully![/green]"
             )
