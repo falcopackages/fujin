@@ -260,9 +260,9 @@ class Config(msgspec.Struct, kw_only=True):
             if not self.python_version:
                 self.python_version = find_python_version()
 
-        if "web" not in self.processes and self.webserver.type != "fujin.proxies.dummy":
+        if "web" not in self.processes and self.webserver.enabled:
             raise ValueError(
-                "Missing web process or set the proxy to 'fujin.proxies.dummy' to disable the use of a proxy"
+                "Missing web process or set the proxy enabled to False to disable the use of a proxy"
             )
 
     @property
@@ -334,9 +334,8 @@ class HostConfig(msgspec.Struct, kw_only=True):
 
 class Webserver(msgspec.Struct):
     upstream: str
-    type: str = "fujin.proxies.caddy"
+    enabled: bool = True
     certbot_email: str | None = None
-    statics: dict[str, str] = msgspec.field(default_factory=dict)
 
 
 def read_version_from_pyproject():

@@ -30,7 +30,9 @@ class Server(BaseCommand):
                 conn.run("curl -LsSf https://astral.sh/uv/install.sh | sh")
                 conn.run("uv tool update-shell")
             conn.run("uv tool install fastfetch-bin-edge")
-            self.create_web_proxy(conn).install()
+            proxy = self.create_web_proxy(conn)
+            if proxy:
+                proxy.install()
             self.stdout.output(
                 "[green]Server bootstrap completed successfully![/green]"
             )

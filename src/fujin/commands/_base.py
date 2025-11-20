@@ -1,4 +1,3 @@
-import importlib
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property
@@ -6,12 +5,11 @@ from typing import Generator
 
 import cappa
 
+from fujin.caddy import Caddy
 from fujin.config import Config
 from fujin.connection import Connection
 from fujin.connection import host_connection
-from fujin.errors import ImproperlyConfiguredError
 from fujin.hooks import HookManager
-from fujin.proxies import WebProxy
 from fujin.systemd import ProcessManager
 
 
@@ -54,18 +52,10 @@ class BaseCommand:
                 with conn.prefix("source .appenv"):
                     yield conn
 
-    @cached_property
-    def web_proxy_class(self) -> type[WebProxy]:
-        module = importlib.import_module(self.config.webserver.type)
-        try:
-            return getattr(module, "WebProxy")
-        except KeyError as e:
-            raise ImproperlyConfiguredError(
-                f"Missing WebProxy class in {self.config.webserver.type}"
-            ) from e
-
-    def create_web_proxy(self, conn: Connection) -> WebProxy:
-        return self.web_proxy_class.create(conn=conn, config=self.config)
+    def create_web_proxy(self, conn: Connection) -> Caddy | None:
+        if not self.config.webserver.enabled:
+            return None
+        return Caddy.create(conn=conn, config=self.config)
 
     def create_process_manager(self, conn: Connection) -> ProcessManager:
         return ProcessManager.create(conn=conn, config=self.config)

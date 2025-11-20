@@ -19,12 +19,11 @@ GH_DOWNL0AD_URL = (
 GH_RELEASE_LATEST_URL = "https://api.github.com/repos/caddyserver/caddy/releases/latest"
 
 
-class WebProxy(msgspec.Struct):
+class Caddy(msgspec.Struct):
     conn: Connection
     domain_name: str
     app_name: str
     upstream: str
-    statics: dict[str, str]
     local_config_dir: Path
 
     @property
@@ -32,14 +31,13 @@ class WebProxy(msgspec.Struct):
         return self.local_config_dir / "Caddyfile"
 
     @classmethod
-    def create(cls, config: Config, conn: Connection) -> WebProxy:
+    def create(cls, config: Config, conn: Connection) -> Caddy:
         return cls(
             conn=conn,
             domain_name=config.host.domain_name,
             upstream=config.webserver.upstream,
             app_name=config.app_name,
             local_config_dir=config.local_config_dir,
-            statics=config.webserver.statics,
         )
 
     def run_pty(self, *args, **kwargs):
@@ -138,9 +136,6 @@ class WebProxy(msgspec.Struct):
 
     def logs(self) -> None:
         self.run_pty(f"sudo journalctl -u caddy -f", warn=True)
-
-    def export_config(self) -> None:
-        pass
 
 
 def get_latest_gh_tag() -> str:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -24,6 +26,9 @@ class Init(BaseCommand):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
             raise cappa.Exit("fujin.toml file already exists", code=1)
+
+        self.scaffold_config()
+
         profile_to_func = {
             "simple": simple_config,
             "falco": falco_config,
@@ -36,6 +41,21 @@ class Init(BaseCommand):
             "[green]Sample configuration file generated successfully![/green]"
         )
 
+    def scaffold_config(self):
+        config_dir = Path(".fujin")
+        config_dir.mkdir(exist_ok=True)
+        systemd_dir = config_dir / "systemd"
+        systemd_dir.mkdir(exist_ok=True)
+
+        templates_folder = (
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+        )
+
+        shutil.copy(templates_folder / "Caddyfile", config_dir / "Caddyfile")
+        shutil.copy(templates_folder / "web.service", systemd_dir / "web.service")
+        shutil.copy(templates_folder / "simple.service", systemd_dir / "simple.service")
+        shutil.copy(templates_folder / "web.socket", systemd_dir / "web.socket")
+
 
 def simple_config(app_name) -> dict:
     config = {
@@ -46,7 +66,6 @@ def simple_config(app_name) -> dict:
         "requirements": "requirements.txt",
         "webserver": {
             "upstream": f"unix//run/{app_name}.sock",
-            "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.PY_PACKAGE,
@@ -83,7 +102,6 @@ def falco_config(app_name: str) -> dict:
             },
             "webserver": {
                 "upstream": "localhost:8000",
-                "type": "fujin.proxies.caddy",
             },
             "aliases": {
                 "console": "app exec -i shell_plus",
@@ -117,7 +135,6 @@ def binary_config(app_name: str) -> dict:
         "distfile": f"dist/bin/{app_name}-{{version}}",
         "webserver": {
             "upstream": "localhost:8000",
-            "type": "fujin.proxies.caddy",
         },
         "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.BINARY,

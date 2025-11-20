@@ -32,7 +32,9 @@ class Deploy(BaseCommand):
                 process_manager.install_services()
                 process_manager.reload_configuration()
                 process_manager.restart_services()
-                self.create_web_proxy(app_conn).setup()
+                proxy = self.create_web_proxy(app_conn)
+                if proxy:
+                    proxy.setup()
                 self.update_version_history(app_conn)
                 self.prune_assets(app_conn)
         self.hook_manager.post_deploy()

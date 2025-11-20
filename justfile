@@ -75,7 +75,7 @@ bumpver VERSION:
 # Build a binary distribution of the project using pyapp
 build-bin:
     #!/usr/bin/env bash
-    current_version=$(uv run bump-my-version show current_version)
+    current_version=$(uvx bump-my-version show current_version)
     uv build
     export PYAPP_UV_ENABLED="1"
     export PYAPP_PYTHON_VERSION="3.12"

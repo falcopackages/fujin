@@ -20,7 +20,7 @@ class ConfigCMD(BaseCommand):
             "release_command": self.config.release_command,
             "installation_mode": self.config.installation_mode,
             "distfile": self.config.distfile,
-            "webserver": f"{{ upstream = '{self.config.webserver.upstream}', type = '{self.config.webserver.type}' }}",
+            "webserver": f"{{ upstream = '{self.config.webserver.upstream}', enabled = '{self.config.webserver.enabled}' }}",
         }
         if self.config.python_version:
             general_config["python_version"] = self.config.python_version

@@ -29,7 +29,7 @@ class ProcessManager:
             conn=conn,
             user=config.host.user,
             is_using_unix_socket="unix" in config.webserver.upstream
-            and config.webserver.type != "fujin.proxies.dummy",
+            and config.webserver.enabled,
             local_config_dir=config.local_config_dir,
         )
 
@@ -98,7 +98,7 @@ class ProcessManager:
         for name, command in self.processes.items():
             template = web_service_content if name == "web" else simple_service_content
             name = self.get_service_name(name)
-            local_config = self.local_config_dir / name
+            local_config = self.local_config_dir / "systemd" / name
             body = (
                 local_config.read_text()
                 if local_config.exists() and not ignore_local
@@ -108,7 +108,7 @@ class ProcessManager:
         # if using unix then we are sure a web process was defined and the proxy is not dummy
         if self.is_using_unix_socket:
             name = f"{self.app_name}.socket"
-            local_config = self.local_config_dir / name
+            local_config = self.local_config_dir / "systemd" / name
             body = (
                 local_config.read_text()
                 if local_config.exists() and not ignore_local
