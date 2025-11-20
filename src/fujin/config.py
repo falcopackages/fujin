@@ -201,7 +201,6 @@ Run custom scripts at specific points with hooks. Check out the `hooks </hooks.h
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -216,7 +215,13 @@ if sys.version_info >= (3, 11):
 else:
     import tomli as tomllib
 
-from .hooks import HooksDict, StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        pass
 
 
 class InstallationMode(StrEnum):
@@ -256,7 +261,6 @@ class Config(msgspec.Struct, kw_only=True):
     processes: dict[str, ProcessConfig] = msgspec.field(default_factory=dict)
     webserver: Webserver
     requirements: str | None = None
-    hooks: HooksDict = msgspec.field(default_factory=dict)
     local_config_dir: Path = Path(".fujin")
     secret_config: SecretConfig | None = msgspec.field(
         name="secrets",

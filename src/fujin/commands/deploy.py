@@ -18,10 +18,8 @@ from fujin.secrets import resolve_secrets
 )
 class Deploy(BaseCommand):
     def __call__(self):
-        self.hook_manager.pre_build()
         parsed_env = self.parse_envfile()
         self.build_app()
-        self.hook_manager.pre_deploy()
         with self.connection() as conn:
             conn.run(f"mkdir -p {self.app_dir}")
             conn.run(f"mkdir -p {self.versioned_assets_dir}")
@@ -36,7 +34,6 @@ class Deploy(BaseCommand):
                     caddy.setup(app_conn, self.config)
                 self.update_version_history(app_conn)
                 self.prune_assets(app_conn)
-        self.hook_manager.post_deploy()
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
@@ -146,6 +143,7 @@ export PATH=".venv/bin:$PATH"
         versioned_assets_dir = f"{self.app_dir}/v{version}"
         if not skip_setup:
             conn.run("sudo rm -rf .venv")
+            conn.run(f"uv python install {self.config.python_version}")
             conn.run("uv venv")
             if self.config.requirements:
                 conn.run(f"uv pip install -r {versioned_assets_dir}/requirements.txt")
