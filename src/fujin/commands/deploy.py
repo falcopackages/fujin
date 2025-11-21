@@ -26,14 +26,12 @@ class Deploy(BaseCommand):
             with conn.cd(self.app_dir):
                 self.transfer_files(conn, env=parsed_env)
                 self.install_project(conn)
-            with self.app_environment() as app_conn:
-                self.release(app_conn)
-                self.install_services(app_conn)
-                self.restart_services(app_conn)
+                self.install_services(conn)
+                self.restart_services(conn)
                 if self.config.webserver.enabled:
-                    caddy.setup(app_conn, self.config)
-                self.update_version_history(app_conn)
-                self.prune_assets(app_conn)
+                    caddy.setup(conn, self.config)
+                self.update_version_history(conn)
+                self.prune_assets(conn)
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
@@ -127,6 +125,8 @@ class Deploy(BaseCommand):
             self._install_python_package(conn, version, skip_setup)
         else:
             self._install_binary(conn, version)
+        if self.config.release_command:
+            conn.run(f"source .appenv && {self.config.release_command}")
 
     def _install_python_package(
         self, conn: Connection, version: str, skip_setup: bool = False
@@ -164,10 +164,6 @@ export PATH="{self.app_dir}:$PATH"
         conn.run(
             f"ln -s {self.versioned_assets_dir}/{self.config.get_distfile_path(version).name} {full_path_app_bin}"
         )
-
-    def release(self, conn: Connection):
-        if self.config.release_command:
-            conn.run(f"source .env && {self.config.release_command}")
 
     def update_version_history(self, conn: Connection):
         result = conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()

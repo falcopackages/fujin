@@ -8,14 +8,14 @@ from rich.table import Table
 
 
 from fujin.commands import BaseCommand
-from fujin.config import InstallationMode, ProcessConfig
+from fujin.config import InstallationMode
 
 
 @cappa.command(help="Run application-related tasks")
 class App(BaseCommand):
     @cappa.command(help="Display information about the application")
     def info(self):
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             remote_version = (
                 conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
                 or "N/A"
@@ -38,7 +38,20 @@ class App(BaseCommand):
             if self.config.installation_mode == InstallationMode.PY_PACKAGE:
                 infos["python_version"] = self.config.python_version
 
-            services_status = self._get_services_status(conn)
+            threads = {
+                name: gevent.spawn(
+                    conn.run,
+                    f"sudo systemctl is-active {name}",
+                    warn=True,
+                    hide=True,
+                )
+                for name in self.config.service_names
+            }
+            gevent.joinall(threads.values())
+            services_status = {
+                name: thread.value.stdout.strip() == "active"
+                for name, thread in threads.items()
+            }
 
             services = {}
             for process_name in self.config.processes:
@@ -108,7 +121,7 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             names = self._resolve_service_names(name)
             threads = [
                 gevent.spawn(conn.run, f"sudo systemctl start {name}", pty=True)
@@ -127,7 +140,7 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             names = self._resolve_service_names(name)
             threads = [
                 gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
@@ -146,7 +159,7 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             names = self._resolve_service_names(name)
             threads = [
                 gevent.spawn(conn.run, f"sudo systemctl stop {name}", pty=True)
@@ -161,7 +174,7 @@ class App(BaseCommand):
         self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
     ):
         # TODO: flash out this more
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             names = self._resolve_service_names(name)
             if names:
                 conn.run(
@@ -183,20 +196,3 @@ class App(BaseCommand):
                 return [f"{self.config.app_name}.socket"]
 
         return [name]
-
-    def _get_services_status(self, conn) -> dict[str, bool]:
-        names = self.config.service_names
-        threads = {
-            name: gevent.spawn(
-                conn.run,
-                f"sudo systemctl is-active {name}",
-                warn=True,
-                hide=True,
-            )
-            for name in names
-        }
-        gevent.joinall(threads.values())
-        return {
-            name: thread.value.stdout.strip() == "active"
-            for name, thread in threads.items()
-        }

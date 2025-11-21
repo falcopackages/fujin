@@ -15,22 +15,18 @@ from .deploy import Deploy
 class Redeploy(BaseCommand):
     def __call__(self):
         deploy = Deploy()
-        self.hook_manager.pre_build()
         parsed_env = deploy.parse_envfile()
         deploy.build_app()
-        self.hook_manager.pre_deploy()
-        with self.app_environment() as conn:
+        with self.connection() as conn:
             conn.run(f"mkdir -p {deploy.versioned_assets_dir}")
             requirements_copied = self._copy_requirements_if_needed(conn)
             deploy.transfer_files(
                 conn, env=parsed_env, skip_requirements=requirements_copied
             )
             deploy.install_project(conn, skip_setup=requirements_copied)
-            deploy.release(conn)
             deploy.install_services(conn)
             deploy.restart_services(conn)
             deploy.update_version_history(conn)
-        self.hook_manager.post_deploy()
         self.stdout.output("[green]Redeployment completed successfully![/green]")
 
     def _copy_requirements_if_needed(self, conn: Connection) -> bool:
