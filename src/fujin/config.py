@@ -201,12 +201,13 @@ Run custom scripts at specific points with hooks. Check out the `hooks </hooks.h
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from pathlib import Path
 
 import msgspec
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from .errors import ImproperlyConfiguredError
 
@@ -245,6 +246,13 @@ class ProcessConfig(msgspec.Struct):
     command: str
     replicas: int = 1
     socket: bool = False
+    timer: str | None = None
+
+    def __post_init__(self):
+        if self.socket and self.timer:
+            raise ImproperlyConfiguredError(
+                "A process cannot have both 'socket' and 'timer' enabled."
+            )
 
 
 class Config(msgspec.Struct, kw_only=True):
@@ -273,7 +281,7 @@ class Config(msgspec.Struct, kw_only=True):
                 self.python_version = find_python_version()
 
         if "web" not in self.processes and self.webserver.enabled:
-            raise ValueError(
+            raise ImproperlyConfiguredError(
                 "Missing web process or set the proxy enabled to False to disable the use of a proxy"
             )
 
@@ -322,10 +330,16 @@ class Config(msgspec.Struct, kw_only=True):
         for name, config in self.processes.items():
             if config.socket:
                 services.append(f"{self.app_name}.socket")
+            if config.timer:
+                service_name = self.get_service_name(name)
+                services.append(f"{service_name.replace('.service', '')}.timer")
         return services
 
     def get_systemd_units(self) -> dict[str, str]:
-        search_paths = [self.local_config_dir]
+        package_templates = (
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+        )
+        search_paths = [self.local_config_dir, package_templates]
         env = Environment(loader=FileSystemLoader(search_paths))
 
         context = {
@@ -336,31 +350,53 @@ class Config(msgspec.Struct, kw_only=True):
 
         files = {}
         for name, config in self.processes.items():
-            template_name = "web.service.j2" if name == "web" else "default.service.j2"
             service_name = self.get_service_name(name)
-
             command = config.command
             process_config = config
 
-            template = env.get_template(template_name)
+            # Try to find a specific template for the process, otherwise use default
+            try:
+                template = env.get_template(f"{name}.service.j2")
+            except TemplateNotFound:
+                template = env.get_template("default.service.j2")
+
             body = template.render(
                 **context,
                 command=command,
-                process_name=service_name,
+                process_name=name,
                 process=process_config,
             )
             files[service_name] = body
 
             if process_config.socket:
-                name = f"{self.app_name}.socket"
-                template = env.get_template("web.socket.j2")
+                socket_name = f"{self.app_name}.socket"
+                try:
+                    template = env.get_template(f"{name}.socket.j2")
+                except TemplateNotFound:
+                    template = env.get_template("default.socket.j2")
                 body = template.render(**context)
-                files[name] = body
+                files[socket_name] = body
+
+            if process_config.timer:
+                timer_name = f"{service_name.replace('.service', '')}.timer"
+                try:
+                    template = env.get_template(f"{name}.timer.j2")
+                except TemplateNotFound:
+                    template = env.get_template("default.timer.j2")
+                body = template.render(
+                    **context,
+                    process_name=name,
+                    process=process_config,
+                )
+                files[timer_name] = body
 
         return files
 
     def get_caddyfile(self) -> str:
-        search_paths = [self.local_config_dir]
+        package_templates = (
+            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+        )
+        search_paths = [self.local_config_dir, package_templates]
         env = Environment(loader=FileSystemLoader(search_paths))
         template = env.get_template("Caddyfile.j2")
         return template.render(

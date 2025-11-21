@@ -21,32 +21,46 @@ class Init(BaseCommand):
         str,
         cappa.Arg(choices=["simple", "falco", "binary"], short="-p", long="--profile"),
     ] = "simple"
+    templates: Annotated[
+        bool,
+        cappa.Arg(
+            long="--templates",
+            short="-t",
+            help="Generate the .fujin folder with default templates",
+        ),
+    ] = False
 
     def __call__(self):
         fujin_toml = Path("fujin.toml")
         if fujin_toml.exists():
-            raise cappa.Exit("fujin.toml file already exists", code=1)
+            self.stdout.output(
+                "[yellow]fujin.toml file already exists, skipping generation[/yellow]"
+            )
+        else:
+            profile_to_func = {
+                "simple": simple_config,
+                "falco": falco_config,
+                "binary": binary_config,
+            }
+            app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
+            config = profile_to_func[self.profile](app_name)
+            fujin_toml.write_text(tomli_w.dumps(config, multiline_strings=True))
+            self.stdout.output(
+                "[green]Sample configuration file generated successfully![/green]"
+            )
 
-        config_dir = Path(".fujin")
-        config_dir.mkdir(exist_ok=True)
+        if self.templates:
+            config_dir = Path(".fujin")
+            config_dir.mkdir(exist_ok=True)
 
-        templates_folder = (
-            Path(importlib.util.find_spec("fujin").origin).parent / "templates"
-        )
-        for file in templates_folder.iterdir():
-            shutil.copy(file, config_dir / file.name)
-
-        profile_to_func = {
-            "simple": simple_config,
-            "falco": falco_config,
-            "binary": binary_config,
-        }
-        app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
-        config = profile_to_func[self.profile](app_name)
-        fujin_toml.write_text(tomli_w.dumps(config, multiline_strings=True))
-        self.stdout.output(
-            "[green]Sample configuration file generated successfully![/green]"
-        )
+            templates_folder = (
+                Path(importlib.util.find_spec("fujin").origin).parent / "templates"
+            )
+            for file in templates_folder.iterdir():
+                shutil.copy(file, config_dir / file.name)
+            self.stdout.output(
+                "[green]Templates generated successfully in .fujin folder![/green]"
+            )
 
 
 def simple_config(app_name) -> dict:

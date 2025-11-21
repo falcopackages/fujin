@@ -40,3 +40,15 @@ def mock_connection():
         conn.prefix.return_value.__enter__.return_value = conn
 
         yield conn
+
+
+@pytest.fixture
+def mock_calls(mock_connection):
+    return mock_connection.run.call_args_list
+
+
+@pytest.fixture(autouse=True)
+def patch_config_read(mock_config):
+    """Automatically patch Config.read for all tests."""
+    with patch("fujin.config.Config.read", return_value=mock_config):
+        yield
