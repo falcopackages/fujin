@@ -25,7 +25,7 @@ class App(BaseCommand):
             ).stdout.strip()
             infos = {
                 "app_name": self.config.app_name,
-                "app_dir": self.app_dir,
+                "app_dir": self.config.app_dir,
                 "app_bin": self.config.app_bin,
                 "local_version": self.config.version,
                 "remote_version": remote_version,

@@ -28,14 +28,17 @@ class Down(BaseCommand):
     def __call__(self):
         try:
             confirm = Confirm.ask(
-                f"""[red]You are about to delete all project files, stop all services, and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. Any assets in your project folder will be lost (sqlite not in there ?). Are you sure you want to proceed? This action is irreversible.[/red]""",
+                f"""[red]You are about to delete all project files, stop all services, 
+                and remove all configurations on the host {self.config.host.ip} for the project {self.config.app_name}. 
+                Any assets in your project folder will be lost (sqlite not in there ?). 
+                Are you sure you want to proceed? This action is irreversible.[/red]""",
             )
         except KeyboardInterrupt:
             raise cappa.Exit("Teardown aborted", code=0)
         if not confirm:
             return
         with self.connection() as conn:
-            conn.run(f"rm -rf {self.app_dir}")
+            conn.run(f"rm -rf {self.config.app_dir}")
             if self.config.webserver.enabled:
                 caddy.teardown(conn, self.config)
 

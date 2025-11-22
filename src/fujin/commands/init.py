@@ -11,7 +11,7 @@ import tomli_w
 
 from fujin.commands import BaseCommand
 from fujin.config import InstallationMode
-from fujin.config import tomllib
+from fujin.config import tomllib, Config
 
 
 @cappa.command(help="Generate a sample configuration file")

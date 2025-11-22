@@ -25,10 +25,6 @@ class BaseCommand:
     def stdout(self) -> cappa.Output:
         return cappa.Output()
 
-    @cached_property
-    def app_dir(self) -> str:
-        return self.config.host.get_app_dir(app_name=self.config.app_name)
-
     @contextmanager
     def connection(self):
         with host_connection(host=self.config.host) as conn:
@@ -37,6 +33,6 @@ class BaseCommand:
     @contextmanager
     def app_environment(self) -> Generator[Connection, None, None]:
         with self.connection() as conn:
-            with conn.cd(self.app_dir):
+            with conn.cd(self.config.app_dir):
                 with conn.prefix("source .appenv"):
                     yield conn

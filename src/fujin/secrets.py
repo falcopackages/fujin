@@ -38,7 +38,8 @@ def resolve_secrets(env_content: str, secret_config: SecretConfig) -> str:
     with adapter_context(secret_config) as reader:
         for key, secret in secrets.items():
             parsed_secrets[key] = gevent.spawn(
-                reader, secret[1:]  # remove the leading $
+                reader,
+                secret[1:],  # remove the leading $
             )
         gevent.joinall(parsed_secrets.values())
     env_dict.update({key: thread.value for key, thread in parsed_secrets.items()})
@@ -48,6 +49,7 @@ def resolve_secrets(env_content: str, secret_config: SecretConfig) -> str:
 # =============================================================================================
 # BITWARDEN
 # =============================================================================================
+
 
 @contextmanager
 def bitwarden(secret_config: SecretConfig) -> Generator[secret_reader, None, None]:
@@ -112,6 +114,7 @@ def _signin(password_env) -> str:
 # SYSTEM
 # =============================================================================================
 
+
 @contextmanager
 def system(_: SecretConfig) -> Generator[secret_reader, None, None]:
     try:
@@ -142,6 +145,7 @@ def one_password(_: SecretConfig) -> Generator[secret_reader, None, None]:
 # =============================================================================================
 # DOPPLER
 # =============================================================================================
+
 
 @contextmanager
 def doppler(_: SecretConfig) -> Generator[secret_reader, None, None]:

@@ -291,6 +291,13 @@ class Config(msgspec.Struct, kw_only=True):
             return f".venv/bin/{self.app_name}"
         return self.app_name
 
+    @property
+    def app_dir(self) -> str:
+        return f"{self.host.apps_dir}/{self.app_name}"
+
+    def get_versioned_assets_dir(self, version: str | None = None) -> str:
+        return f"{self.config.app_dir}/v{version or self.config.version}"
+
     def get_distfile_path(self, version: str | None = None) -> Path:
         version = version or self.version
         return Path(self.distfile.format(version=version))
@@ -345,7 +352,7 @@ class Config(msgspec.Struct, kw_only=True):
         context = {
             "app_name": self.app_name,
             "user": self.host.user,
-            "app_dir": self.host.get_app_dir(self.app_name),
+            "app_dir": self.app_dir,
         }
 
         files = {}
@@ -444,9 +451,6 @@ class HostConfig(msgspec.Struct, kw_only=True):
             msg = f"Env {self.password_env} can not be found"
             raise ImproperlyConfiguredError(msg)
         return password
-
-    def get_app_dir(self, app_name: str) -> str:
-        return f"{self.apps_dir}/{app_name}"
 
 
 class Webserver(msgspec.Struct):

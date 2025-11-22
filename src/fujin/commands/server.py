@@ -32,7 +32,9 @@ class Server(BaseCommand):
                 conn.run("uv tool update-shell")
             conn.run("uv tool install fastfetch-bin-edge")
             if self.config.webserver.enabled:
-                caddy.install(conn)
+                installed = caddy.install(conn)
+                if not installed:
+                    self.stdout.output("[yellow]Caddy is already installed.[/yellow]")
             self.stdout.output(
                 "[green]Server bootstrap completed successfully![/green]"
             )

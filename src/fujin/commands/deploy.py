@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from pathlib import Path
 
@@ -18,20 +19,47 @@ from fujin.secrets import resolve_secrets
 )
 class Deploy(BaseCommand):
     def __call__(self):
-        parsed_env = self.parse_envfile()
-        self.build_app()
+        # parse and resolve secrets in .env file
+        if self.config.secret_config:
+            self.stdout.output("[blue]Reading secrets....[/blue]")
+            parsed_env = resolve_secrets(
+                self.config.host.env_content, self.config.secret_config
+            )
+        else:
+            parsed_env = self.config.host.env_content
+
+        # run build command
+        try:
+            subprocess.run(self.config.build_command, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            raise cappa.Exit(f"build command failed: {e}", code=1) from e
+        # the build commands might be responsible for creating the requirements file
+        if self.config.requirements and not Path(self.config.requirements).exists():
+            raise cappa.Exit(f"{self.config.requirements} not found", code=1)
+
         with self.connection() as conn:
-            conn.run(f"mkdir -p {self.app_dir}")
-            conn.run(f"mkdir -p {self.versioned_assets_dir}")
-            with conn.cd(self.app_dir):
-                self.transfer_files(conn, env=parsed_env)
-                self.install_project(conn)
+            conn.run(f"mkdir -p {self.config.app_dir}")
+            with conn.cd(self.config.app_dir):
+                self.install_project(conn, env=parsed_env)
                 self.install_services(conn)
                 self.restart_services(conn)
                 if self.config.webserver.enabled:
                     caddy.setup(conn, self.config)
                 self.update_version_history(conn)
-                self.prune_assets(conn)
+                # prune old versions
+                if self.config.versions_to_keep:
+                    result = conn.run(
+                        f"sed -n '{self.config.versions_to_keep + 1},$p' .versions",
+                        hide=True,
+                    ).stdout.strip()
+                    result_list = result.split("\n")
+                    if result != "":
+                        to_prune = [f"{self.config.app_dir}/v{v}" for v in result_list]
+                        conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
+                        conn.run(
+                            f"sed -i '{self.config.versions_to_keep + 1},$d' .versions",
+                            warn=True,
+                        )
         self.stdout.output("[green]Project deployment completed successfully![/green]")
         self.stdout.output(
             f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
@@ -81,55 +109,75 @@ class Deploy(BaseCommand):
         ]
         gevent.joinall(threads)
 
-    def build_app(self) -> None:
-        try:
-            subprocess.run(self.config.build_command, check=True, shell=True)
-        except subprocess.CalledProcessError as e:
-            raise cappa.Exit(f"build command failed: {e}", code=1) from e
-
-    @property
-    def versioned_assets_dir(self) -> str:
-        return f"{self.app_dir}/v{self.config.version}"
-
-    def parse_envfile(self) -> str:
-        if self.config.secret_config:
-            self.stdout.output("[blue]Reading secrets....[/blue]")
-            return resolve_secrets(
-                self.config.host.env_content, self.config.secret_config
-            )
-        return self.config.host.env_content
-
-    def transfer_files(
-        self, conn: Connection, env: str, skip_requirements: bool = False
-    ):
-        conn.run(f"echo '{env}' > {self.app_dir}/.env")
-        distfile_path = self.config.get_distfile_path()
-        conn.put(
-            str(distfile_path),
-            f"{self.versioned_assets_dir}/{distfile_path.name}",
-        )
-        if not skip_requirements and self.config.requirements:
-            requirements = Path(self.config.requirements)
-            if not requirements.exists():
-                raise cappa.Exit(f"{self.config.requirements} not found", code=1)
-            conn.put(
-                Path(self.config.requirements).resolve(),
-                f"{self.versioned_assets_dir}/requirements.txt",
-            )
-
     def install_project(
-        self, conn: Connection, version: str | None = None, *, skip_setup: bool = False
+        self,
+        conn: Connection,
+        *,
+        version: str | None = None,
+        env: str,
     ):
         version = version or self.config.version
+
+        # transfer project files
+        versioned_assets_dir = self.config.get_versioned_assets_dir(version)
+        conn.run(f"echo '{env}' > {self.config.app_dir}/.env")
+        distfile_path = self.config.get_distfile_path(version)
+        conn.put(
+            str(distfile_path),
+            f"{versioned_assets_dir}/{distfile_path.name}",
+        )
+        skip_install = False
+        if self.config.requirements:
+            requirements = Path(self.config.requirements)
+
+            # ====
+            local_requirements_hash = hashlib.md5(requirements.read_bytes()).hexdigest()
+            current_host_version = conn.run(
+                "head -n 1 .versions", warn=True, hide=True
+            ).stdout.strip()
+            try:
+                host_requirements_hash = (
+                    conn.run(
+                        f"md5sum v{current_host_version}/requirements.txt",
+                        warn=True,
+                        hide=True,
+                    )
+                    .stdout.strip()
+                    .split()[0]
+                )
+                skip_install = host_requirements_hash == local_requirements_hash
+            except IndexError:
+                skip_install = False
+                conn.put(
+                    Path(self.config.requirements).resolve(),
+                    f"{versioned_assets_dir}/requirements.txt",
+                )
+            else:
+                if skip_requirements and current_host_version != self.config.version:
+                    conn.run(
+                        f"cp v{current_host_version}/requirements.txt  {self.config.app_dir}/v{self.config.version}/requirements.txt "
+                    )
+            # ====
+
+        # install project
         if self.config.installation_mode == InstallationMode.PY_PACKAGE:
-            self._install_python_package(conn, version, skip_setup)
+            self._install_python_package(conn, version, skip_install)
         else:
             self._install_binary(conn, version)
         if self.config.release_command:
             conn.run(f"source .appenv && {self.config.release_command}")
 
+        # update version history
+        result = conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
+        if result == version:
+            return
+        if result == "":
+            conn.run(f"echo '{version}' > .versions")
+        else:
+            conn.run(f"sed -i '1i {version}' .versions")
+
     def _install_python_package(
-        self, conn: Connection, version: str, skip_setup: bool = False
+        self, conn: Connection, version: str, skip_install: bool = False
     ):
         appenv = f"""
 set -a  # Automatically export all variables
@@ -139,9 +187,9 @@ export UV_COMPILE_BYTECODE=1
 export UV_PYTHON=python{self.config.python_version}
 export PATH=".venv/bin:$PATH"
 """
-        conn.run(f"echo '{appenv.strip()}' > {self.app_dir}/.appenv")
-        versioned_assets_dir = f"{self.app_dir}/v{version}"
-        if not skip_setup:
+        conn.run(f"echo '{appenv.strip()}' > {self.config.app_dir}/.appenv")
+        versioned_assets_dir = self.config.get_versioned_assets_dir(version)
+        if not skip_install:
             conn.run("sudo rm -rf .venv")
             conn.run(f"uv python install {self.config.python_version}")
             conn.run("uv venv")
@@ -156,33 +204,11 @@ export PATH=".venv/bin:$PATH"
 set -a  # Automatically export all variables
 source .env
 set +a  # Stop automatic export
-export PATH="{self.app_dir}:$PATH"
+export PATH="{self.config.app_dir}:$PATH"
 """
-        conn.run(f"echo '{appenv.strip()}' > {self.app_dir}/.appenv")
-        full_path_app_bin = f"{self.app_dir}/{self.config.app_bin}"
+        conn.run(f"echo '{appenv.strip()}' > {self.config.app_dir}/.appenv")
+        full_path_app_bin = f"{self.config.app_dir}/{self.config.app_bin}"
         conn.run(f"rm {full_path_app_bin}", warn=True)
         conn.run(
-            f"ln -s {self.versioned_assets_dir}/{self.config.get_distfile_path(version).name} {full_path_app_bin}"
+            f"ln -s {self.config.get_versioned_assets_dir(version)}/{self.config.get_distfile_path(version).name} {full_path_app_bin}"
         )
-
-    def update_version_history(self, conn: Connection):
-        result = conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
-        if result == self.config.version:
-            return
-        if result == "":
-            conn.run(f"echo '{self.config.version}' > .versions")
-        else:
-            conn.run(f"sed -i '1i {self.config.version}' .versions")
-
-    def prune_assets(self, conn: Connection):
-        if not self.config.versions_to_keep:
-            return
-        result = conn.run(
-            f"sed -n '{self.config.versions_to_keep + 1},$p' .versions", hide=True
-        ).stdout.strip()
-        result_list = result.split("\n")
-        if result == "":
-            return
-        to_prune = [f"{self.app_dir}/v{v}" for v in result_list]
-        conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
-        conn.run(f"sed -i '{self.config.versions_to_keep + 1},$d' .versions", warn=True)
