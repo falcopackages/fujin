@@ -14,7 +14,7 @@ def test_deploy_calls_expected_commands(mock_config, mock_calls):
 
     # Verify specific commands were run
     assert call(f"mkdir -p {mock_config.app_dir}") in mock_calls
-    assert call(f"mkdir -p {mock_config.get_versioned_assets_dir()}") in mock_calls
+    assert call(f"mkdir -p {mock_config.get_release_dir()}") in mock_calls
 
     # Check if services were restarted
     assert call("sudo systemctl restart testapp.service", pty=True) in mock_calls

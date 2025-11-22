@@ -295,8 +295,8 @@ class Config(msgspec.Struct, kw_only=True):
     def app_dir(self) -> str:
         return f"{self.host.apps_dir}/{self.app_name}"
 
-    def get_versioned_assets_dir(self, version: str | None = None) -> str:
-        return f"{self.config.app_dir}/v{version or self.config.version}"
+    def get_release_dir(self, version: str | None = None) -> str:
+        return f"{self.app_dir}/v{version or self.version}"
 
     def get_distfile_path(self, version: str | None = None) -> Path:
         version = version or self.version
@@ -358,6 +358,7 @@ class Config(msgspec.Struct, kw_only=True):
         files = {}
         for name, config in self.processes.items():
             service_name = self.get_service_name(name)
+            process_name = service_name.replace(".service", "")
             command = config.command
             process_config = config
 
@@ -370,7 +371,7 @@ class Config(msgspec.Struct, kw_only=True):
             body = template.render(
                 **context,
                 command=command,
-                process_name=name,
+                process_name=process_name,
                 process=process_config,
             )
             files[service_name] = body
@@ -392,7 +393,7 @@ class Config(msgspec.Struct, kw_only=True):
                     template = env.get_template("default.timer.j2")
                 body = template.render(
                     **context,
-                    process_name=name,
+                    process_name=process_name,
                     process=process_config,
                 )
                 files[timer_name] = body
@@ -409,6 +410,7 @@ class Config(msgspec.Struct, kw_only=True):
         return template.render(
             domain_name=self.host.domain_name,
             upstream=self.webserver.upstream,
+            statics=self.webserver.statics,
         )
 
 
@@ -456,7 +458,7 @@ class HostConfig(msgspec.Struct, kw_only=True):
 class Webserver(msgspec.Struct):
     upstream: str
     enabled: bool = True
-    certbot_email: str | None = None
+    statics: dict[str, str] = msgspec.field(default_factory=dict)
 
 
 def read_version_from_pyproject():

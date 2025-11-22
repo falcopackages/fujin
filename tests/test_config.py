@@ -112,3 +112,13 @@ def test_get_distfile_path(mock_config):
     mock_config.version = "1.0.0"
     assert mock_config.get_distfile_path() == Path("dist/app-1.0.0.whl")
     assert mock_config.get_distfile_path("2.0.0") == Path("dist/app-2.0.0.whl")
+
+
+def test_get_caddyfile_with_statics(mock_config):
+    mock_config.webserver.statics = {"/static/*": "/var/www/static/"}
+    caddyfile = mock_config.get_caddyfile()
+
+    assert "handle_path /static/* {" in caddyfile
+    assert "root * /var/www/static/" in caddyfile
+    assert "file_server" in caddyfile
+    assert "reverse_proxy localhost:8000" in caddyfile

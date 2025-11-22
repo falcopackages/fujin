@@ -39,14 +39,16 @@ class Deploy(BaseCommand):
 
         with self.connection() as conn:
             conn.run(f"mkdir -p {self.config.app_dir}")
+            # copy env file
+            conn.run(f"echo '{parsed_env}' > {self.config.app_dir}/.env")
+            self.install_project(conn)
+            self.install_services(conn)
+            self.restart_services(conn)
+            if self.config.webserver.enabled:
+                caddy.setup(conn, self.config)
+
+            # prune old versions
             with conn.cd(self.config.app_dir):
-                self.install_project(conn, env=parsed_env)
-                self.install_services(conn)
-                self.restart_services(conn)
-                if self.config.webserver.enabled:
-                    caddy.setup(conn, self.config)
-                self.update_version_history(conn)
-                # prune old versions
                 if self.config.versions_to_keep:
                     result = conn.run(
                         f"sed -n '{self.config.versions_to_keep + 1},$p' .versions",
@@ -114,70 +116,54 @@ class Deploy(BaseCommand):
         conn: Connection,
         *,
         version: str | None = None,
-        env: str,
+        rolling_back: bool = False,
     ):
         version = version or self.config.version
 
-        # transfer project files
-        versioned_assets_dir = self.config.get_versioned_assets_dir(version)
-        conn.run(f"echo '{env}' > {self.config.app_dir}/.env")
-        distfile_path = self.config.get_distfile_path(version)
-        conn.put(
-            str(distfile_path),
-            f"{versioned_assets_dir}/{distfile_path.name}",
-        )
-        skip_install = False
-        if self.config.requirements:
-            requirements = Path(self.config.requirements)
+        # transfer binary or package file
+        release_dir = self.config.get_release_dir(version)
+        conn.run(f"mkdir -p {release_dir}")
 
-            # ====
-            local_requirements_hash = hashlib.md5(requirements.read_bytes()).hexdigest()
-            current_host_version = conn.run(
-                "head -n 1 .versions", warn=True, hide=True
-            ).stdout.strip()
-            try:
-                host_requirements_hash = (
-                    conn.run(
-                        f"md5sum v{current_host_version}/requirements.txt",
-                        warn=True,
-                        hide=True,
-                    )
-                    .stdout.strip()
-                    .split()[0]
-                )
-                skip_install = host_requirements_hash == local_requirements_hash
-            except IndexError:
-                skip_install = False
-                conn.put(
-                    Path(self.config.requirements).resolve(),
-                    f"{versioned_assets_dir}/requirements.txt",
-                )
-            else:
-                if skip_requirements and current_host_version != self.config.version:
-                    conn.run(
-                        f"cp v{current_host_version}/requirements.txt  {self.config.app_dir}/v{self.config.version}/requirements.txt "
-                    )
-            # ====
+        distfile_path = self.config.get_distfile_path(version)
+        remote_package_path = f"{release_dir}/{distfile_path.name}"
+        if not rolling_back:
+            conn.put(str(distfile_path), remote_package_path)
 
         # install project
-        if self.config.installation_mode == InstallationMode.PY_PACKAGE:
-            self._install_python_package(conn, version, skip_install)
-        else:
-            self._install_binary(conn, version)
+        with conn.cd(self.config.app_dir):
+            if self.config.installation_mode == InstallationMode.PY_PACKAGE:
+                self._install_python_package(
+                    conn,
+                    remote_package_path=remote_package_path,
+                    version=version,
+                    release_dir=release_dir,
+                )
+            else:
+                self._install_binary(conn, remote_package_path)
+
+        # run release command
         if self.config.release_command:
             conn.run(f"source .appenv && {self.config.release_command}")
 
         # update version history
-        result = conn.run("head -n 1 .versions", warn=True, hide=True).stdout.strip()
-        if result == version:
-            return
-        if result == "":
-            conn.run(f"echo '{version}' > .versions")
-        else:
-            conn.run(f"sed -i '1i {version}' .versions")
+        with conn.cd(self.config.app_dir):
+            result = conn.run(
+                "head -n 1 .versions", warn=True, hide=True
+            ).stdout.strip()
+            if result == version:
+                return
+            if result == "":
+                conn.run(f"echo '{version}' > .versions")
+            else:
+                conn.run(f"sed -i '1i {version}' .versions")
 
     def _install_python_package(
-        self, conn: Connection, version: str, skip_install: bool = False
+        self,
+        conn: Connection,
+        *,
+        remote_package_path: str,
+        version: str,
+        release_dir: str,
     ):
         appenv = f"""
 set -a  # Automatically export all variables
@@ -188,18 +174,49 @@ export UV_PYTHON=python{self.config.python_version}
 export PATH=".venv/bin:$PATH"
 """
         conn.run(f"echo '{appenv.strip()}' > {self.config.app_dir}/.appenv")
-        versioned_assets_dir = self.config.get_versioned_assets_dir(version)
-        if not skip_install:
+
+        # Decision: Do we need to rebuild the virtualenv?
+        rebuild_venv = False
+        if self.config.requirements:
+            local_reqs_path = Path(self.config.requirements)
+            curr_release_reqs = f"{release_dir}/requirements.txt"
+
+            # Get the version currently running on the host to find previous requirements
+            prev_version = conn.run(
+                "head -n 1 .versions", warn=True, hide=True
+            ).stdout.strip()
+            prev_release_reqs = (
+                f"{self.config.get_release_dir(prev_version)}/requirements.txt"
+            )
+
+            local_hash = hashlib.md5(local_reqs_path.read_bytes()).hexdigest()
+            remote_hash = ""
+
+            if prev_version:
+                res = conn.run(f"md5sum {prev_release_reqs}", warn=True, hide=True)
+                if res.ok:
+                    remote_hash = res.stdout.strip().split()[0]
+
+            if local_hash == remote_hash:
+                rebuild_venv = False
+                # Even if we don't rebuild, we copy the reqs file to the new folder
+                # so the new release folder is complete and self-contained.
+                if prev_release_reqs != curr_release_reqs:
+                    conn.run(f"cp {prev_release_reqs} {curr_release_reqs}")
+            else:
+                # Hashes differ or previous file didn't exist -> Upload new one
+                conn.put(str(local_reqs_path), curr_release_reqs)
+
+        # Execution
+        if not rebuild_venv:
             conn.run("sudo rm -rf .venv")
             conn.run(f"uv python install {self.config.python_version}")
             conn.run("uv venv")
             if self.config.requirements:
-                conn.run(f"uv pip install -r {versioned_assets_dir}/requirements.txt")
-        conn.run(
-            f"uv pip install {versioned_assets_dir}/{self.config.get_distfile_path(version).name}"
-        )
+                conn.run(f"uv pip install -r {release_dir}/requirements.txt")
+        conn.run(f"uv pip install {remote_package_path}")
 
-    def _install_binary(self, conn: Connection, version: str):
+    def _install_binary(self, conn: Connection, remote_package_path: str):
         appenv = f"""
 set -a  # Automatically export all variables
 source .env
@@ -209,6 +226,4 @@ export PATH="{self.config.app_dir}:$PATH"
         conn.run(f"echo '{appenv.strip()}' > {self.config.app_dir}/.appenv")
         full_path_app_bin = f"{self.config.app_dir}/{self.config.app_bin}"
         conn.run(f"rm {full_path_app_bin}", warn=True)
-        conn.run(
-            f"ln -s {self.config.get_versioned_assets_dir(version)}/{self.config.get_distfile_path(version).name} {full_path_app_bin}"
-        )
+        conn.run(f"ln -s {remote_package_path} {full_path_app_bin}")

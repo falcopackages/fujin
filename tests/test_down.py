@@ -14,7 +14,7 @@ def test_down_removes_files_and_stops_services(mock_config, mock_calls):
         down = Down()
         down()
 
-        assert call(f"rm -rf {mock_config.host.get_app_dir('testapp')}") in mock_calls
+        assert call(f"rm -rf {mock_config.app_dir}") in mock_calls
         assert call("sudo systemctl stop testapp.service", warn=True) in mock_calls
         assert call("sudo systemctl disable testapp.service", warn=True) in mock_calls
         assert (
