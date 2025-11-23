@@ -49,21 +49,20 @@ class App(BaseCommand):
             }
             gevent.joinall(threads.values())
             services_status = {
-                name: thread.value.stdout.strip() == "active"
-                for name, thread in threads.items()
+                name: thread.value.stdout.strip() for name, thread in threads.items()
             }
 
             services = {}
             for process_name in self.config.processes:
                 service_names = self.config.get_process_service_names(process_name)
                 running_count = sum(
-                    1 for name in service_names if services_status.get(name, False)
+                    1 for name in service_names if services_status.get(name) == "active"
                 )
                 total_count = len(service_names)
 
                 if total_count == 1:
                     services[process_name] = services_status.get(
-                        service_names[0], False
+                        service_names[0], "unknown"
                     )
                 else:
                     services[process_name] = f"{running_count}/{total_count}"
@@ -76,15 +75,15 @@ class App(BaseCommand):
 
         table = Table(title="", header_style="bold cyan")
         table.add_column("Process", style="")
-        table.add_column("Running?")
+        table.add_column("Status")
         for service, status in services.items():
-            if isinstance(status, bool):
-                status_str = (
-                    "[bold green]Yes[/bold green]"
-                    if status
-                    else "[bold red]No[/bold red]"
-                )
-            else:
+            if status == "active":
+                status_str = f"[bold green]{status}[/bold green]"
+            elif status == "failed":
+                status_str = f"[bold red]{status}[/bold red]"
+            elif status in ("inactive", "unknown"):
+                status_str = f"[dim]{status}[/dim]"
+            elif "/" in status:
                 running, total = map(int, status.split("/"))
                 if running == total:
                     status_str = f"[bold green]{status}[/bold green]"
@@ -92,6 +91,8 @@ class App(BaseCommand):
                     status_str = f"[bold red]{status}[/bold red]"
                 else:
                     status_str = f"[bold yellow]{status}[/bold yellow]"
+            else:
+                status_str = status
 
             table.add_row(service, status_str)
 
@@ -172,18 +173,21 @@ class App(BaseCommand):
     @cappa.command(help="Show logs for the specified service")
     def logs(
         self,
-        name: Annotated[str, cappa.Arg(help="Service name")],
+        name: Annotated[str | None, cappa.Arg(help="Service name")] = None,
         follow: Annotated[bool, cappa.Arg(short="-f")] = False,
+        lines: Annotated[int, cappa.Arg(short="-n", long="--lines")] = 50,
     ):
-        # TODO: improve this, more options, and maybe logs multiple process at the same time ?
         with self.connection() as conn:
             names = self._resolve_service_names(name)
             if names:
+                units = " ".join(f"-u {n}" for n in names)
                 conn.run(
-                    f"sudo journalctl -u {names[0]} {'-f' if follow else ''}",
+                    f"sudo journalctl {units} -n {lines} {'-f' if follow else ''}",
                     warn=True,
                     pty=True,
                 )
+            else:
+                self.stdout.output("[yellow]No services found[/yellow]")
 
     def _resolve_service_names(self, name: str | None) -> list[str]:
         if not name:
@@ -196,5 +200,8 @@ class App(BaseCommand):
             has_socket = any(config.socket for config in self.config.processes.values())
             if has_socket:
                 return [f"{self.config.app_name}.socket"]
+
+        if name == "timer":
+            return [n for n in self.config.service_names if n.endswith(".timer")]
 
         return [name]

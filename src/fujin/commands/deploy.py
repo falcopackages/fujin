@@ -21,7 +21,7 @@ class Deploy(BaseCommand):
     def __call__(self):
         # parse and resolve secrets in .env file
         if self.config.secret_config:
-            self.stdout.output("[blue]Reading secrets....[/blue]")
+            self.stdout.output("[blue]Resolving secrets from configuration...[/blue]")
             parsed_env = resolve_secrets(
                 self.config.host.env_content, self.config.secret_config
             )
@@ -30,7 +30,7 @@ class Deploy(BaseCommand):
 
         # run build command
         try:
-            self.stdout.output("[blue]Building application[/blue]")
+            self.stdout.output("[blue]Building application...[/blue]")
             subprocess.run(self.config.build_command, check=True, shell=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
@@ -39,16 +39,16 @@ class Deploy(BaseCommand):
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
 
         with self.connection() as conn:
-            self.stdout.output("[blue]Installing project on remote[/blue]")
+            self.stdout.output("[blue]Installing project on remote host...[/blue]")
             conn.run(f"mkdir -p {self.config.app_dir}")
             # copy env file
             conn.run(f"echo '{parsed_env}' > {self.config.app_dir}/.env")
             self.install_project(conn)
-            self.stdout.output("[blue]Setting up systemd services[/blue]")
+            self.stdout.output("[blue]Configuring systemd services...[/blue]")
             self.install_services(conn)
             self.restart_services(conn)
             if self.config.webserver.enabled:
-                self.stdout.output("[blue]Setting up caddy conf[/blue]")
+                self.stdout.output("[blue]Configuring web server...[/blue]")
                 caddy.setup(conn, self.config)
 
             # prune old versions
@@ -60,16 +60,18 @@ class Deploy(BaseCommand):
                     ).stdout.strip()
                     result_list = result.split("\n")
                     if result != "":
-                        self.stdout.output("[blue]Pruning old project versions[/blue]")
+                        self.stdout.output(
+                            "[blue]Pruning old release versions...[/blue]"
+                        )
                         to_prune = [f"{self.config.app_dir}/v{v}" for v in result_list]
                         conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
                         conn.run(
                             f"sed -i '{self.config.versions_to_keep + 1},$d' .versions",
                             warn=True,
                         )
-        self.stdout.output("[green]Project deployment completed successfully![/green]")
+        self.stdout.output("[green]Deployment completed successfully![/green]")
         self.stdout.output(
-            f"[blue]Access the deployed project at: https://{self.config.host.domain_name}[/blue]"
+            f"[blue]Application is available at: https://{self.config.host.domain_name}[/blue]"
         )
 
     def install_services(self, conn: Connection) -> None:
@@ -88,27 +90,6 @@ class Deploy(BaseCommand):
         ]
         gevent.joinall(threads)
 
-        # Cleanup Stale Files and there instances
-        ls_unit_files = conn.run(
-            f"ls /etc/systemd/system/{self.config.app_name}*", warn=True, hide=True
-        )
-        if ls_unit_files.ok:
-            for path in ls_unit_files.stdout.split():
-                filename = Path(path).name
-                if filename not in new_units and filename.startswith(
-                    self.config.app_name
-                ):
-                    self.stdout.output(
-                        f"[yellow]Removing stale service file: {filename}[/yellow]"
-                    )
-                    target = (
-                        filename.replace("@.service", "@*.service")
-                        if "@.service" in filename
-                        else filename
-                    )
-                    conn.run(f"sudo systemctl disable --now '{target}'", warn=True)
-                    conn.run(f"sudo rm {path}", warn=True)
-
         # Cleanup Stale Instances (e.g: replicas downgrade)
         ls_units = conn.run(
             f"systemctl list-units --full --all --plain --no-legend '{self.config.app_name}*'",
@@ -119,11 +100,28 @@ class Deploy(BaseCommand):
             for line in ls_units.stdout.splitlines():
                 unit = line.split()[0]
                 if unit not in self.config.service_names:
-                    self.stdout.output(f"[yellow]Stopping stale unit: {unit}[/yellow]")
+                    self.stdout.output(
+                        f"[yellow]Stopping stale service unit: {unit}[/yellow]"
+                    )
                     conn.run(f"sudo systemctl disable --now {unit}", warn=True)
 
+        # Cleanup Stale Files
+        ls_unit_files = conn.run(
+            f"ls /etc/systemd/system/{self.config.app_name}*", warn=True, hide=True
+        )
+        if ls_unit_files.ok:
+            for path in ls_unit_files.stdout.split():
+                filename = Path(path).name
+                if filename not in new_units and filename.startswith(
+                    self.config.app_name
+                ):
+                    self.stdout.output(
+                        f"[yellow]Cleaning up stale service file: {filename}[/yellow]"
+                    )
+                    conn.run(f"sudo rm {path}", warn=True)
+
     def restart_services(self, conn: Connection) -> None:
-        self.stdout.output("[blue]Restarting services[/blue]")
+        self.stdout.output("[blue]Restarting services...[/blue]")
         threads = [
             gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
             for name in self.config.service_names
@@ -162,7 +160,7 @@ class Deploy(BaseCommand):
 
             # run release command
             if self.config.release_command:
-                self.stdout.output("[blue]Running release command[/blue]")
+                self.stdout.output("[blue]Executing release command...[/blue]")
                 conn.run(f"source .appenv && {self.config.release_command}")
 
             # update version history
@@ -228,7 +226,7 @@ export PATH=".venv/bin:$PATH"
 
         # Execution
         if rebuild_venv:
-            self.stdout.output("[blue]Installing python packages[/blue]")
+            self.stdout.output("[blue]Installing Python dependencies...[/blue]")
             conn.run("sudo rm -rf .venv")
             conn.run(f"uv python install {self.config.python_version}")
             conn.run("uv venv")
@@ -236,7 +234,7 @@ export PATH=".venv/bin:$PATH"
                 conn.run(f"uv pip install -r {release_dir}/requirements.txt")
         else:
             self.stdout.output(
-                "[blue]Requirements has not changed, venv left untouched[/blue]"
+                "[blue]Requirements unchanged, skipping virtualenv rebuild...[/blue]"
             )
         conn.run(f"uv pip install {remote_package_path}")
 
