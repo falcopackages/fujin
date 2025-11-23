@@ -30,6 +30,7 @@ class Deploy(BaseCommand):
 
         # run build command
         try:
+            self.stdout.output("[blue]Building application[/blue]")
             subprocess.run(self.config.build_command, check=True, shell=True)
         except subprocess.CalledProcessError as e:
             raise cappa.Exit(f"build command failed: {e}", code=1) from e
@@ -38,13 +39,16 @@ class Deploy(BaseCommand):
             raise cappa.Exit(f"{self.config.requirements} not found", code=1)
 
         with self.connection() as conn:
+            self.stdout.output("[blue]Installing project on remote[/blue]")
             conn.run(f"mkdir -p {self.config.app_dir}")
             # copy env file
             conn.run(f"echo '{parsed_env}' > {self.config.app_dir}/.env")
             self.install_project(conn)
+            self.stdout.output("[blue]Setting up systemd services[/blue]")
             self.install_services(conn)
             self.restart_services(conn)
             if self.config.webserver.enabled:
+                self.stdout.output("[blue]Setting up caddy conf[/blue]")
                 caddy.setup(conn, self.config)
 
             # prune old versions
@@ -56,6 +60,7 @@ class Deploy(BaseCommand):
                     ).stdout.strip()
                     result_list = result.split("\n")
                     if result != "":
+                        self.stdout.output("[blue]Pruning old project versions[/blue]")
                         to_prune = [f"{self.config.app_dir}/v{v}" for v in result_list]
                         conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
                         conn.run(
@@ -141,12 +146,12 @@ class Deploy(BaseCommand):
             else:
                 self._install_binary(conn, remote_package_path)
 
-        # run release command
-        if self.config.release_command:
-            conn.run(f"source .appenv && {self.config.release_command}")
+            # run release command
+            if self.config.release_command:
+                self.stdout.output("[blue]Running release command[/blue]")
+                conn.run(f"source .appenv && {self.config.release_command}")
 
-        # update version history
-        with conn.cd(self.config.app_dir):
+            # update version history
             result = conn.run(
                 "head -n 1 .versions", warn=True, hide=True
             ).stdout.strip()
@@ -176,7 +181,7 @@ export PATH=".venv/bin:$PATH"
         conn.run(f"echo '{appenv.strip()}' > {self.config.app_dir}/.appenv")
 
         # Decision: Do we need to rebuild the virtualenv?
-        rebuild_venv = False
+        rebuild_venv = True
         if self.config.requirements:
             local_reqs_path = Path(self.config.requirements)
             curr_release_reqs = f"{release_dir}/requirements.txt"
@@ -208,12 +213,15 @@ export PATH=".venv/bin:$PATH"
                 conn.put(str(local_reqs_path), curr_release_reqs)
 
         # Execution
-        if not rebuild_venv:
+        if rebuild_venv:
+            self.stdout.output("[blue]Installing python packages[/blue]")
             conn.run("sudo rm -rf .venv")
             conn.run(f"uv python install {self.config.python_version}")
             conn.run("uv venv")
             if self.config.requirements:
                 conn.run(f"uv pip install -r {release_dir}/requirements.txt")
+        else:            
+            self.stdout.output("[blue]Requirements has not changed, venv left untouched[/blue]")
         conn.run(f"uv pip install {remote_package_path}")
 
     def _install_binary(self, conn: Connection, remote_package_path: str):

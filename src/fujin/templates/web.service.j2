@@ -1,7 +1,7 @@
 # All options are documented here https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 # Inspiration was taken from here https://docs.gunicorn.org/en/stable/deploy.html#systemd
 [Unit]
-Description={{ app_name }} {{ process_name }}
+Description={{ process_name }}
 {% if process.socket %}
 Requires={{ app_name }}.socket
 {% endif %}

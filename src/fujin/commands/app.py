@@ -171,7 +171,9 @@ class App(BaseCommand):
 
     @cappa.command(help="Show logs for the specified service")
     def logs(
-        self, name: Annotated[str, cappa.Arg(help="Service name")], follow: bool = False
+        self,
+        name: Annotated[str, cappa.Arg(help="Service name")],
+        follow: Annotated[bool, cappa.Arg(short="-f")] = False,
     ):
         # TODO: flash out this more
         with self.connection() as conn:
