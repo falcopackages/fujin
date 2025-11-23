@@ -56,7 +56,7 @@ class Down(BaseCommand):
             ]
             gevent.joinall(threads)
             # Remove service files
-            for name in service_names:
+            for name in self.config.get_systemd_units():
                 conn.run(f"sudo rm /etc/systemd/system/{name}", warn=True)
 
             conn.run("sudo systemctl daemon-reload")

@@ -49,7 +49,15 @@ class Deploy(BaseCommand):
             self.restart_services(conn)
             if self.config.webserver.enabled:
                 self.stdout.output("[blue]Configuring web server...[/blue]")
-                caddy.setup(conn, self.config)
+                caddy_configured = caddy.setup(conn, self.config)
+                if not caddy_configured:
+                    self.stdout.output(
+                        "[red]Failed to reload Caddy.[/red]\n"
+                        "[yellow]Please ensure your Caddy configuration is correct:\n"
+                        "1. Directory /etc/caddy/conf.d must exist and be owned by caddy:caddy.\n"
+                        "2. /etc/caddy/Caddyfile must include 'import conf.d/*.caddy' (relative path).\n"
+                        "Fix these issues and rerun deploy.[/yellow]",
+                    )
 
             # prune old versions
             with conn.cd(self.config.app_dir):
@@ -69,10 +77,11 @@ class Deploy(BaseCommand):
                             f"sed -i '{self.config.versions_to_keep + 1},$d' .versions",
                             warn=True,
                         )
-        self.stdout.output("[green]Deployment completed successfully![/green]")
-        self.stdout.output(
-            f"[blue]Application is available at: https://{self.config.host.domain_name}[/blue]"
-        )
+        if caddy_configured:
+            self.stdout.output("[green]Deployment completed successfully![/green]")
+            self.stdout.output(
+                f"[blue]Application is available at: https://{self.config.host.domain_name}[/blue]"
+            )
 
     def install_services(self, conn: Connection) -> None:
         new_units = self.config.get_systemd_units()

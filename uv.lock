@@ -611,7 +611,7 @@ wheels = [
 
 [[package]]
 name = "fujin-cli"
-version = "0.12.2"
+version = "0.13.0a2"
 source = { editable = "." }
 dependencies = [
     { name = "cappa" },

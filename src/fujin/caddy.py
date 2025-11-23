@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import urllib.request
 
+import cappa
+from rich import print
+
 from fujin.config import Config
 from fujin.connection import Connection
 
@@ -70,12 +73,14 @@ def setup(conn: Connection, config: Config):
     rendered_content = config.get_caddyfile()
 
     remote_path = f"/etc/caddy/conf.d/{config.app_name}.caddy"
-    conn.run(
+    res = conn.run(
         f"echo '{rendered_content}' | sudo tee {remote_path}",
         hide="out",
         pty=True,
+        warn=True,
     )
-    conn.run("sudo systemctl reload caddy", pty=True)
+    conn.run("sudo systemctl reload caddy", pty=True, warn=True)
+    return res.ok
 
 
 def teardown(conn: Connection, config: Config):
