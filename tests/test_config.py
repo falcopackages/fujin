@@ -122,3 +122,11 @@ def test_get_caddyfile_with_statics(mock_config):
     assert "root * /var/www/static/" in caddyfile
     assert "file_server" in caddyfile
     assert "reverse_proxy localhost:8000" in caddyfile
+
+
+def test_process_config_validation_replicas_and_socket_or_timer():
+    with pytest.raises(ImproperlyConfiguredError):
+        ProcessConfig(command="cmd", replicas=2, socket=True)
+
+    with pytest.raises(ImproperlyConfiguredError):
+        ProcessConfig(command="cmd", replicas=2, timer="OnCalendar=daily")

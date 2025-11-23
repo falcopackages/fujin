@@ -9,7 +9,7 @@ import gevent
 
 from fujin import caddy
 from fujin.commands import BaseCommand
-from fujin.config import InstallationMode, ProcessConfig
+from fujin.config import InstallationMode
 from fujin.connection import Connection
 from fujin.secrets import resolve_secrets
 
@@ -73,43 +73,57 @@ class Deploy(BaseCommand):
         )
 
     def install_services(self, conn: Connection) -> None:
-        units = self.config.get_systemd_units()
-        for filename, content in units.items():
+        new_units = self.config.get_systemd_units()
+        for filename, content in new_units.items():
             conn.run(
                 f"echo '{content}' | sudo tee /etc/systemd/system/{filename}",
                 hide="out",
                 pty=True,
             )
 
-        threads = []
-        for name in self.config.processes:
-            service_name = self.config.get_service_name(name)
-            config = self.config.processes[name]
-            if isinstance(config, ProcessConfig) and config.socket and name == "web":
-                threads.append(
-                    gevent.spawn(
-                        conn.run,
-                        f"sudo systemctl enable --now {self.config.app_name}.socket",
-                        pty=True,
-                    )
-                )
-            else:
-                threads.append(
-                    gevent.spawn(
-                        conn.run,
-                        f"sudo systemctl enable {service_name}",
-                        pty=True,
-                    )
-                )
-        threads.append(
-            gevent.spawn(
-                conn.run,
-                "sudo systemctl daemon-reload",
-            )
-        )
+        conn.run("sudo systemctl daemon-reload")
+        threads = [
+            gevent.spawn(conn.run, f"sudo systemctl enable --now {name}", pty=True)
+            for name in self.config.service_names
+        ]
         gevent.joinall(threads)
 
+        # Cleanup Stale Files and there instances
+        ls_unit_files = conn.run(
+            f"ls /etc/systemd/system/{self.config.app_name}*", warn=True, hide=True
+        )
+        if ls_unit_files.ok:
+            for path in ls_unit_files.stdout.split():
+                filename = Path(path).name
+                if filename not in new_units and filename.startswith(
+                    self.config.app_name
+                ):
+                    self.stdout.output(
+                        f"[yellow]Removing stale service file: {filename}[/yellow]"
+                    )
+                    target = (
+                        filename.replace("@.service", "@*.service")
+                        if "@.service" in filename
+                        else filename
+                    )
+                    conn.run(f"sudo systemctl disable --now '{target}'", warn=True)
+                    conn.run(f"sudo rm {path}", warn=True)
+
+        # Cleanup Stale Instances (e.g: replicas downgrade)
+        ls_units = conn.run(
+            f"systemctl list-units --full --all --plain --no-legend '{self.config.app_name}*'",
+            warn=True,
+            hide=True,
+        )
+        if ls_units.ok:
+            for line in ls_units.stdout.splitlines():
+                unit = line.split()[0]
+                if unit not in self.config.service_names:
+                    self.stdout.output(f"[yellow]Stopping stale unit: {unit}[/yellow]")
+                    conn.run(f"sudo systemctl disable --now {unit}", warn=True)
+
     def restart_services(self, conn: Connection) -> None:
+        self.stdout.output("[blue]Restarting services[/blue]")
         threads = [
             gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
             for name in self.config.service_names
@@ -220,8 +234,10 @@ export PATH=".venv/bin:$PATH"
             conn.run("uv venv")
             if self.config.requirements:
                 conn.run(f"uv pip install -r {release_dir}/requirements.txt")
-        else:            
-            self.stdout.output("[blue]Requirements has not changed, venv left untouched[/blue]")
+        else:
+            self.stdout.output(
+                "[blue]Requirements has not changed, venv left untouched[/blue]"
+            )
         conn.run(f"uv pip install {remote_package_path}")
 
     def _install_binary(self, conn: Connection, remote_package_path: str):

@@ -253,6 +253,10 @@ class ProcessConfig(msgspec.Struct):
             raise ImproperlyConfiguredError(
                 "A process cannot have both 'socket' and 'timer' enabled."
             )
+        if self.replicas > 1 and (self.socket or self.timer):
+            raise ImproperlyConfiguredError(
+                "A process cannot have replicas > 1 and either 'socket' or 'timer' enabled."
+            )
 
 
 class Config(msgspec.Struct, kw_only=True):

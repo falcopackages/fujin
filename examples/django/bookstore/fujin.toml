@@ -8,7 +8,7 @@ distfile = "./../../../dist/bookstore-{version}-py3-none-any.whl"
 installation_mode = "python-package"
 
 [webserver]
-upstream = "unix//run/bookstore.sock"
+upstream = "unix//run/bookstore/bookstore.sock"
 type = "fujin.proxies.caddy"
 statics = { "/static/*" = "/var/www/bookstore/static/" }
 
@@ -18,8 +18,8 @@ dbconsole = "app exec -i dbshell"
 shell = "server exec --appenv -i bash"
 
 [processes]
-web = { command = ".venv/bin/gunicorn bookstore.wsgi:application --bind unix:/run/bookstore.sock --access-logfile - --error-logfile -" }
-worker = { command = ".venv/bin/bookstore db_worker" , replicas=2}
+web = { command = ".venv/bin/gunicorn bookstore.wsgi:application --bind unix:/run/bookstore/bookstore.sock --access-logfile - --error-logfile -" }
+worker = { command = ".venv/bin/bookstore db_worker", replicas = 2 }
 
 # [host]
 # domain_name = "localhost"

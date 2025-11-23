@@ -175,7 +175,7 @@ class App(BaseCommand):
         name: Annotated[str, cappa.Arg(help="Service name")],
         follow: Annotated[bool, cappa.Arg(short="-f")] = False,
     ):
-        # TODO: flash out this more
+        # TODO: improve this, more options, and maybe logs multiple process at the same time ?
         with self.connection() as conn:
             names = self._resolve_service_names(name)
             if names:
