@@ -19,7 +19,12 @@ from fujin.config import tomllib, Config
 class Init(BaseCommand):
     profile: Annotated[
         str,
-        cappa.Arg(choices=["simple", "falco", "binary"], short="-p", long="--profile"),
+        cappa.Arg(
+            choices=["simple", "falco", "binary", "django"],
+            short="-p",
+            long="--profile",
+            help="Configuration profile to use",
+        ),
     ] = "simple"
     templates: Annotated[
         bool,
@@ -41,9 +46,19 @@ class Init(BaseCommand):
                 "simple": simple_config,
                 "falco": falco_config,
                 "binary": binary_config,
+                "django": django_config,
             }
             app_name = Path().resolve().stem.replace("-", "_").replace(" ", "_").lower()
             config = profile_to_func[self.profile](app_name)
+            if not Path(".python-version").exists():
+                config["python_version"] = "3.12"
+                pyproject_toml = Path("pyproject.toml")
+                if pyproject_toml.exists():
+                    pyproject = tomllib.loads(pyproject_toml.read_text())
+                    config["app"] = pyproject.get("project", {}).get("name", app_name)
+                    if pyproject.get("project", {}).get("version"):
+                        # fujin will read the version itself from the pyproject
+                        config.pop("version")
             fujin_toml.write_text(tomli_w.dumps(config, multiline_strings=True))
             self.stdout.output(
                 "[green]Sample configuration file generated successfully![/green]"
@@ -70,14 +85,14 @@ def simple_config(app_name) -> dict:
         "build_command": "uv build && uv pip compile pyproject.toml -o requirements.txt",
         "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
         "requirements": "requirements.txt",
+        "python_version": "3.12",
         "webserver": {
-            "upstream": f"unix//run/{app_name}.sock",
+            "upstream": f"unix//run/{app_name}/{app_name}.sock",
         },
-        "release_command": f"{app_name} migrate",
         "installation_mode": InstallationMode.PY_PACKAGE,
         "processes": {
             "web": {
-                "command": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix//run/{app_name}.sock",
+                "command": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix:/run/{app_name}/{app_name}.sock",
                 "socket": True,
             }
         },
@@ -88,15 +103,36 @@ def simple_config(app_name) -> dict:
             "envfile": ".env.prod",
         },
     }
-    if not Path(".python-version").exists():
-        config["python_version"] = "3.12"
-    pyproject_toml = Path("pyproject.toml")
-    if pyproject_toml.exists():
-        pyproject = tomllib.loads(pyproject_toml.read_text())
-        config["app"] = pyproject.get("project", {}).get("name", app_name)
-        if pyproject.get("project", {}).get("version"):
-            # fujin will read the version itself from the pyproject
-            config.pop("version")
+    return config
+
+
+def django_config(app_name) -> dict:
+    config = {
+        "app": app_name,
+        "version": "0.0.1",
+        "build_command": "uv build && uv pip compile pyproject.toml -o requirements.txt",
+        "distfile": f"dist/{app_name}-{{version}}-py3-none-any.whl",
+        "requirements": "requirements.txt",
+        "python_version": "3.12",
+        "webserver": {
+            "upstream": f"unix//run/{app_name}/{app_name}.sock",
+            "statics": {"/static/*": f"/var/www/{app_name}/static/"},
+        },
+        "release_command": f"{app_name} migrate && {app_name} collectstatic --no-input && sudo mkdir -p /var/www/{app_name}/static/ && sudo rsync  -a --delete staticfiles/ /var/www/{app_name}/static/",
+        "installation_mode": InstallationMode.PY_PACKAGE,
+        "processes": {
+            "web": {
+                "command": f".venv/bin/gunicorn {app_name}.wsgi:application --bind unix:/run/{app_name}/{app_name}.sock",
+                "socket": True,
+            }
+        },
+        "aliases": {"shell": "server exec --appenv -i bash"},
+        "host": {
+            "user": "root",
+            "domain_name": f"{app_name}.com",
+            "envfile": ".env.prod",
+        },
+    }
     return config
 
 
