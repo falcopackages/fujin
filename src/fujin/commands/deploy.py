@@ -97,6 +97,8 @@ class Deploy(BaseCommand):
             pty=True,
         )
 
+        valid_units = [*self.config.service_names, *(list(new_units.keys()))]
+
         # Cleanup Stale Instances (e.g: replicas downgrade)
         ls_units = conn.run(
             f"systemctl list-units --full --all --plain --no-legend '{self.config.app_name}*'",
@@ -107,7 +109,7 @@ class Deploy(BaseCommand):
         if ls_units.ok:
             for line in ls_units.stdout.splitlines():
                 unit = line.split()[0]
-                if unit not in self.config.service_names:
+                if unit not in valid_units:
                     stale_units.append(unit)
 
         if stale_units:
@@ -130,9 +132,7 @@ class Deploy(BaseCommand):
             if result.ok:
                 for path in result.stdout.split():
                     filename = Path(path).name
-                    if filename not in new_units and filename.startswith(
-                        self.config.app_name
-                    ):
+                    if filename not in valid_units:
                         stale_paths.append(path)
 
         if stale_paths:
