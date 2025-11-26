@@ -15,10 +15,19 @@ def test_down_removes_files_and_stops_services(mock_config, mock_calls):
         down()
 
         assert call(f"rm -rf {mock_config.app_dir}") in mock_calls
-        assert call("sudo systemctl stop testapp.service", warn=True) in mock_calls
-        assert call("sudo systemctl disable testapp.service", warn=True) in mock_calls
         assert (
-            call("sudo rm /etc/systemd/system/testapp.service", warn=True) in mock_calls
+            call(
+                "sudo systemctl disable --now testapp.service testapp-worker@1.service testapp-worker@2.service",
+                warn=True,
+            )
+            in mock_calls
+        )
+        assert (
+            call(
+                "sudo rm /etc/systemd/system/testapp.service /etc/systemd/system/testapp-worker@.service",
+                warn=True,
+            )
+            in mock_calls
         )
         assert call("sudo systemctl daemon-reload") in mock_calls
 

@@ -1,0 +1,3 @@
+[
+  "sudo systemctl start testapp-worker@1.service testapp-worker@2.service"
+]

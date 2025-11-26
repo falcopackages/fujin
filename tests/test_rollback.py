@@ -24,7 +24,7 @@ def test_rollback_flow(mock_config, mock_connection, mock_calls):
         rollback = Rollback()
         rollback()
 
-        mock_install.assert_called_with(mock_connection, "0.0.9")
+        mock_install.assert_called_with(mock_connection, "0.0.9", rolling_back=True)
         mock_restart.assert_called_with(mock_connection)
         # Should remove newer versions (0.1.0 is current, rolling back to 0.0.9, so 0.1.0 is removed)
         assert call("rm -r v0.1.0", warn=True) in mock_calls

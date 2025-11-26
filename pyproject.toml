@@ -58,6 +58,7 @@ dev = [
   "git-cliff>=2.6.1",
   "litestar>=2.12.1",
   "pytest>=9.0.1",
+  "inline-snapshot>=0.13.0",
 ]
 docs = [
   "myst-parser",
@@ -226,3 +227,9 @@ protect_breaking_commits = false
 filter_commits = false
 topo_order = false
 sort_commits = "newest"
+
+[tool.pytest.ini_options]
+markers = ["use_recorder: mark test to use the mock recorder"]
+
+[tool.inline-snapshot]
+format-command = "ruff format --stdin-filename {filename}"

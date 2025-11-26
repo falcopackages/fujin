@@ -52,7 +52,10 @@ fujin *ARGS:
     uv export --no-hashes --group docs --format requirements-txt > docs/requirements.txt
 
 @test *ARGS:
-    uv run pytest {{ ARGS }}
+    uv run pytest --ignore=tests/integration {{ ARGS }}
+
+@test-integration *ARGS:
+    uv run pytest tests/integration {{ ARGS }}
 
 # -------------------------------------------------------------------------
 # RELEASE UTILITIES
