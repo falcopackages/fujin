@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Annotated
 
 import cappa
-import gevent
 from rich.table import Table
 
 
@@ -38,19 +37,20 @@ class App(BaseCommand):
             if self.config.installation_mode == InstallationMode.PY_PACKAGE:
                 infos["python_version"] = self.config.python_version
 
-            threads = {
-                name: gevent.spawn(
-                    conn.run,
-                    f"sudo systemctl is-active {name}",
+            if self.config.webserver.enabled:
+                infos["running_at"] = f"https://{self.config.host.domain_name}"
+
+            names = self.config.service_names
+            if names:
+                result = conn.run(
+                    f"sudo systemctl is-active {' '.join(names)}",
                     warn=True,
                     hide=True,
                 )
-                for name in self.config.service_names
-            }
-            gevent.joinall(threads.values())
-            services_status = {
-                name: thread.value.stdout.strip() for name, thread in threads.items()
-            }
+                statuses = result.stdout.strip().split("\n")
+                services_status = dict(zip(names, statuses))
+            else:
+                services_status = {}
 
             services = {}
             for process_name in self.config.processes:
@@ -122,15 +122,7 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        with self.connection() as conn:
-            names = self._resolve_service_names(name)
-            threads = [
-                gevent.spawn(conn.run, f"sudo systemctl start {name}", pty=True)
-                for name in names
-            ]
-            gevent.joinall(threads)
-        msg = f"{name} Service" if name else "All Services"
-        self.stdout.output(f"[green]{msg} started successfully![/green]")
+        self._run_service_command("start", name)
 
     @cappa.command(
         help="Restart the specified service or all services if no name is provided"
@@ -141,15 +133,7 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
-        with self.connection() as conn:
-            names = self._resolve_service_names(name)
-            threads = [
-                gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
-                for name in names
-            ]
-            gevent.joinall(threads)
-        msg = f"{name} Service" if name else "All Services"
-        self.stdout.output(f"[green]{msg} restarted successfully![/green]")
+        self._run_service_command("restart", name)
 
     @cappa.command(
         help="Stop the specified service or all services if no name is provided"
@@ -160,15 +144,27 @@ class App(BaseCommand):
             str | None, cappa.Arg(help="Service name, no value means all")
         ] = None,
     ):
+        self._run_service_command("stop", name)
+
+    def _run_service_command(self, command: str, name: str | None):
         with self.connection() as conn:
             names = self._resolve_service_names(name)
-            threads = [
-                gevent.spawn(conn.run, f"sudo systemctl stop {name}", pty=True)
-                for name in names
-            ]
-            gevent.joinall(threads)
-        msg = f"{name} Service" if name else "All Services"
-        self.stdout.output(f"[green]{msg} stopped successfully![/green]")
+            if not names:
+                self.stdout.output("[yellow]No services found[/yellow]")
+                return
+
+            self.stdout.output(
+                f"Running [cyan]{command}[/cyan] on: [cyan]{', '.join(names)}[/cyan]"
+            )
+            conn.run(f"sudo systemctl {command} {' '.join(names)}", pty=True)
+
+        msg = f"{name} service" if name else "All Services"
+        past_tense = {
+            "start": "started",
+            "restart": "restarted",
+            "stop": "stopped",
+        }.get(command, command)
+        self.stdout.output(f"[green]{msg} {past_tense} successfully![/green]")
 
     @cappa.command(help="Show logs for the specified service")
     def logs(

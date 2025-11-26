@@ -9,7 +9,6 @@ installation_mode = "python-package"
 
 [webserver]
 upstream = "unix//run/bookstore/bookstore.sock"
-type = "fujin.proxies.caddy"
 statics = { "/static/*" = "/var/www/bookstore/static/" }
 
 [aliases]

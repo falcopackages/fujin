@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Annotated
 
 import cappa
-import gevent
 from rich.prompt import Confirm
 
 from fujin import caddy
@@ -43,21 +42,16 @@ class Down(BaseCommand):
                 caddy.teardown(conn, self.config)
 
             service_names = self.config.service_names
-            # Stop services
-            threads = [
-                gevent.spawn(conn.run, f"sudo systemctl stop {name}", warn=True)
-                for name in service_names
-            ]
-            gevent.joinall(threads)
-            # Disable services
-            threads = [
-                gevent.spawn(conn.run, f"sudo systemctl disable {name}", warn=True)
-                for name in service_names
-            ]
-            gevent.joinall(threads)
+            self.stdout.output(
+                f"[blue]Stopping and disabling services: {' '.join(service_names)}[/blue]"
+            )
+            conn.run(
+                f"sudo systemctl disable --now {' '.join(service_names)}", warn=True
+            )
             # Remove service files
-            for name in self.config.get_systemd_units():
-                conn.run(f"sudo rm /etc/systemd/system/{name}", warn=True)
+            unit_files = list(self.config.get_systemd_units().keys())
+            paths = [f"/etc/systemd/system/{name}" for name in unit_files]
+            conn.run(f"sudo rm {' '.join(paths)}", warn=True)
 
             conn.run("sudo systemctl daemon-reload")
             conn.run("sudo systemctl reset-failed")

@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 
 import cappa
-import gevent
 
 from fujin import caddy
 from fujin.commands import BaseCommand
@@ -93,11 +92,10 @@ class Deploy(BaseCommand):
             )
 
         conn.run("sudo systemctl daemon-reload")
-        threads = [
-            gevent.spawn(conn.run, f"sudo systemctl enable --now {name}", pty=True)
-            for name in self.config.service_names
-        ]
-        gevent.joinall(threads)
+        conn.run(
+            f"sudo systemctl enable --now {' '.join(self.config.service_names)}",
+            pty=True,
+        )
 
         # Cleanup Stale Instances (e.g: replicas downgrade)
         ls_units = conn.run(
@@ -105,37 +103,50 @@ class Deploy(BaseCommand):
             warn=True,
             hide=True,
         )
+        stale_units = []
         if ls_units.ok:
             for line in ls_units.stdout.splitlines():
                 unit = line.split()[0]
                 if unit not in self.config.service_names:
-                    self.stdout.output(
-                        f"[yellow]Stopping stale service unit: {unit}[/yellow]"
-                    )
-                    conn.run(f"sudo systemctl disable --now {unit}", warn=True)
+                    stale_units.append(unit)
 
-        # Cleanup Stale Files
-        ls_unit_files = conn.run(
-            f"ls /etc/systemd/system/{self.config.app_name}*", warn=True, hide=True
-        )
-        if ls_unit_files.ok:
-            for path in ls_unit_files.stdout.split():
-                filename = Path(path).name
-                if filename not in new_units and filename.startswith(
-                    self.config.app_name
-                ):
-                    self.stdout.output(
-                        f"[yellow]Cleaning up stale service file: {filename}[/yellow]"
-                    )
-                    conn.run(f"sudo rm {path}", warn=True)
+        if stale_units:
+            self.stdout.output(
+                f"[yellow]Stopping stale service units: {', '.join(stale_units)}[/yellow]"
+            )
+            conn.run(f"sudo systemctl disable --now {' '.join(stale_units)}", warn=True)
+
+        # Cleanup Stale Files & Symlinks
+        stale_paths = []
+        search_dirs = [
+            "/etc/systemd/system",
+            "/etc/systemd/system/multi-user.target.wants",
+        ]
+
+        for directory in search_dirs:
+            result = conn.run(
+                f"ls {directory}/{self.config.app_name}*", warn=True, hide=True
+            )
+            if result.ok:
+                for path in result.stdout.split():
+                    filename = Path(path).name
+                    if filename not in new_units and filename.startswith(
+                        self.config.app_name
+                    ):
+                        stale_paths.append(path)
+
+        if stale_paths:
+            self.stdout.output(
+                f"[yellow]Cleaning up stale service files and symlinks: {', '.join([Path(p).name for p in stale_paths])}[/yellow]"
+            )
+            conn.run(f"sudo rm {' '.join(stale_paths)}", warn=True)
 
     def restart_services(self, conn: Connection) -> None:
         self.stdout.output("[blue]Restarting services...[/blue]")
-        threads = [
-            gevent.spawn(conn.run, f"sudo systemctl restart {name}", pty=True)
-            for name in self.config.service_names
-        ]
-        gevent.joinall(threads)
+        conn.run(
+            f"sudo systemctl restart {' '.join(self.config.service_names)}",
+            pty=True,
+        )
 
     def install_project(
         self,
@@ -161,7 +172,6 @@ class Deploy(BaseCommand):
                 self._install_python_package(
                     conn,
                     remote_package_path=remote_package_path,
-                    version=version,
                     release_dir=release_dir,
                 )
             else:
@@ -188,7 +198,6 @@ class Deploy(BaseCommand):
         conn: Connection,
         *,
         remote_package_path: str,
-        version: str,
         release_dir: str,
     ):
         appenv = f"""

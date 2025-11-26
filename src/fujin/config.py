@@ -83,6 +83,9 @@ class Config(msgspec.Struct, kw_only=True):
             if not self.python_version:
                 self.python_version = find_python_version()
 
+        if len(self.processes) == 0:
+            raise ImproperlyConfiguredError("At least one process must be defined")
+
         if "web" not in self.processes and self.webserver.enabled:
             raise ImproperlyConfiguredError(
                 "Missing web process or set the proxy enabled to False to disable the use of a proxy"
