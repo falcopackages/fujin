@@ -39,7 +39,6 @@ dependencies = [
   "fabric>=3.2.2",
   "jinja2>=3.1.3",
   "msgspec[toml]>=0.18.6",
-  "parallel-ssh>=2.16.0.post1",
   "python-dotenv>=1.0.1",
   "rich>=13.9.2",
 ]
@@ -51,11 +50,7 @@ urls.Source = "https://github.com/falcopackages/fujin"
 scripts.fujin = "fujin.__main__:main"
 
 [dependency-groups]
-dev = [
-  "django>=5.1.2",
-  "pytest>=9.0.1",
-  "inline-snapshot>=0.13.0",
-]
+dev = ["django>=5.1.2", "pytest>=9.0.1", "inline-snapshot>=0.13.0"]
 docs = [
   "myst-parser",
   "shibuya",
