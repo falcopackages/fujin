@@ -52,11 +52,7 @@ scripts.fujin = "fujin.__main__:main"
 
 [dependency-groups]
 dev = [
-  "bump-my-version>=0.27",
   "django>=5.1.2",
-  "fastapi>=0.115.3",
-  "git-cliff>=2.6.1",
-  "litestar>=2.12.1",
   "pytest>=9.0.1",
   "inline-snapshot>=0.13.0",
 ]

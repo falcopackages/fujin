@@ -2,42 +2,55 @@ from unittest.mock import patch, call
 from fujin.commands.down import Down
 
 
-def test_down_aborts_if_not_confirmed(mock_calls):
+from unittest.mock import patch
+from fujin.commands.down import Down
+from inline_snapshot import snapshot
+
+
+def test_down_aborts_if_not_confirmed(mock_connection, get_commands):
     with patch("rich.prompt.Confirm.ask", return_value=False):
         down = Down()
         down()
-        assert len(mock_calls) == 0
+        assert get_commands(mock_connection.mock_calls) == snapshot([])
 
 
-def test_down_removes_files_and_stops_services(mock_config, mock_calls):
+def test_down_removes_files_and_stops_services(mock_connection, get_commands):
     with patch("rich.prompt.Confirm.ask", return_value=True):
         down = Down()
         down()
 
-        assert call(f"rm -rf {mock_config.app_dir}") in mock_calls
-        assert (
-            call(
+        assert get_commands(mock_connection.mock_calls) == snapshot(
+            [
+                "rm -rf /home/testuser/.local/share/fujin/testapp",
+                "sudo rm /etc/caddy/conf.d/testapp.caddy",
+                "sudo systemctl reload caddy",
                 "sudo systemctl disable --now testapp.service testapp-worker@1.service testapp-worker@2.service",
-                warn=True,
-            )
-            in mock_calls
-        )
-        assert (
-            call(
                 "sudo rm /etc/systemd/system/testapp.service /etc/systemd/system/testapp-worker@.service",
-                warn=True,
-            )
-            in mock_calls
+                "sudo systemctl daemon-reload",
+                "sudo systemctl reset-failed",
+            ]
         )
-        assert call("sudo systemctl daemon-reload") in mock_calls
 
 
-def test_down_full_uninstall_proxy(mock_config, mock_calls):
-    with (
-        patch("rich.prompt.Confirm.ask", return_value=True),
-        patch("fujin.caddy.uninstall") as mock_uninstall,
-    ):
+def test_down_full_uninstall_proxy(mock_connection, get_commands):
+    with patch("rich.prompt.Confirm.ask", return_value=True):
         down = Down(full=True)
         down()
 
-        assert mock_uninstall.called
+        assert get_commands(mock_connection.mock_calls) == snapshot(
+            [
+                "rm -rf /home/testuser/.local/share/fujin/testapp",
+                "sudo rm /etc/caddy/conf.d/testapp.caddy",
+                "sudo systemctl reload caddy",
+                "sudo systemctl disable --now testapp.service testapp-worker@1.service testapp-worker@2.service",
+                "sudo rm /etc/systemd/system/testapp.service /etc/systemd/system/testapp-worker@.service",
+                "sudo systemctl daemon-reload",
+                "sudo systemctl reset-failed",
+                "sudo systemctl stop caddy",
+                "sudo systemctl disable caddy",
+                "sudo rm /usr/bin/caddy",
+                "sudo rm /etc/systemd/system/caddy.service",
+                "sudo userdel caddy",
+                "sudo rm -rf /etc/caddy",
+            ]
+        )

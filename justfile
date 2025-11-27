@@ -57,22 +57,30 @@ fujin *ARGS:
 @test-integration *ARGS:
     uv run pytest tests/integration {{ ARGS }}
 
+# Update inline snapshots
+@test-fix:
+    just test --inline-snapshot=fix
+
+# Review inline snapshots
+@test-review:
+    just test --inline-snapshot=review
+
 # -------------------------------------------------------------------------
 # RELEASE UTILITIES
 #---------------------------------------------------------------------------
 
 # Generate changelog
-logchanges *ARGS:
-    uv run git-cliff --output CHANGELOG.md {{ ARGS }}
+@logchanges *ARGS:
+    uvx git-cliff --output CHANGELOG.md {{ ARGS }}
 
 # Bump project version and update changelog
 bumpver VERSION:
     #!/usr/bin/env bash
     set -euo pipefail
-    uv run bump-my-version bump {{ VERSION }}
+    uvx bump-my-version bump {{ VERSION }}
     just logchanges
     [ -z "$(git status --porcelain)" ] && { echo "No changes to commit."; git push && git push --tags; exit 0; }
-    version="$(uv run bump-my-version show current_version)"
+    version="$(uvx bump-my-version show current_version)"
     git add -A
     git commit -m "Generate changelog for version ${version}"
     git tag -f "v${version}"

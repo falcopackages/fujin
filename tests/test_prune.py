@@ -1,13 +1,19 @@
-from unittest.mock import patch, call
+from unittest.mock import patch
 from fujin.commands.prune import Prune
+from inline_snapshot import snapshot
 
 
-def test_prune_flow(mock_config, mock_connection, mock_calls):
+def test_prune_flow(mock_connection, get_commands):
     mock_connection.run.return_value.stdout = "0.0.8\n0.0.7"
 
     with patch("rich.prompt.Confirm.ask", return_value=True):
         prune = Prune(keep=2)
         prune()
 
-        app_dir = mock_config.host.apps_dir + "/testapp"
-        assert call(f"rm -r {app_dir}/v0.0.8 {app_dir}/v0.0.7", warn=True) in mock_calls
+        assert get_commands(mock_connection.mock_calls) == snapshot(
+            [
+                "sed -n '3,$p' .versions",
+                "rm -r /home/testuser/.local/share/fujin/testapp/v0.0.8 /home/testuser/.local/share/fujin/testapp/v0.0.7",
+                "sed -i '3,$d' .versions",
+            ]
+        )

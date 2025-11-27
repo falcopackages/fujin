@@ -1,22 +1,11 @@
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
-from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 from fujin.config import Config, HostConfig, Webserver, ProcessConfig, InstallationMode
-from .recorder import MockRecorder
 
 
 @pytest.fixture
-def recorder(request):
-    # Store recordings in tests/recordings/<test_name>.json
-    test_name = request.node.name
-    recording_path = Path(__file__).parent / "recordings" / f"{test_name}.json"
-    rec = MockRecorder(recording_path)
-    yield rec
-
-
-@pytest.fixture
-def mock_config(request):
+def mock_config():
     return Config(
         app_name="testapp",
         version="0.1.0",
@@ -39,7 +28,7 @@ def mock_config(request):
 
 
 @pytest.fixture
-def mock_connection(request, recorder):
+def mock_connection():
     with patch("fujin.commands._base.host_connection") as mock:
         conn = MagicMock()
         # Setup context manager behavior for the connection itself
@@ -52,10 +41,6 @@ def mock_connection(request, recorder):
 
         yield conn
 
-        marker = request.node.get_closest_marker("use_recorder")
-        if marker:
-            recorder.process_calls(conn.mock_calls)
-
 
 @pytest.fixture
 def mock_calls(mock_connection):
@@ -67,14 +52,6 @@ def patch_config_read(mock_config):
     """Automatically patch Config.read for all tests."""
     with patch("fujin.config.Config.read", return_value=mock_config):
         yield
-
-
-@pytest.fixture
-def assert_command_called(mock_calls):
-    def _assert(cmd, **kwargs):
-        assert call(cmd, **kwargs) in mock_calls
-
-    return _assert
 
 
 @pytest.fixture

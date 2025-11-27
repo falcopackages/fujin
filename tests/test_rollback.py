@@ -1,8 +1,9 @@
-from unittest.mock import patch, call, MagicMock
+from unittest.mock import patch, MagicMock
 from fujin.commands.rollback import Rollback
+from inline_snapshot import snapshot
 
 
-def test_rollback_flow(mock_config, mock_connection, mock_calls):
+def test_rollback_flow(mock_connection, get_commands):
     def run_side_effect(command, **kwargs):
         mock = MagicMock()
         if "sed -n '2,$p' .versions" in command:
@@ -18,13 +19,31 @@ def test_rollback_flow(mock_config, mock_connection, mock_calls):
     with (
         patch("rich.prompt.Prompt.ask", return_value="0.0.9"),
         patch("rich.prompt.Confirm.ask", return_value=True),
-        patch("fujin.commands.deploy.Deploy.install_project") as mock_install,
-        patch("fujin.commands.deploy.Deploy.restart_services") as mock_restart,
     ):
         rollback = Rollback()
         rollback()
 
-        mock_install.assert_called_with(mock_connection, "0.0.9", rolling_back=True)
-        mock_restart.assert_called_with(mock_connection)
-        # Should remove newer versions (0.1.0 is current, rolling back to 0.0.9, so 0.1.0 is removed)
-        assert call("rm -r v0.1.0", warn=True) in mock_calls
+        assert get_commands(mock_connection.mock_calls) == snapshot(
+            [
+                "sed -n '2,$p' .versions",
+                "head -n 1 .versions",
+                "mkdir -p /home/testuser/.local/share/fujin/testapp/v0.0.9",
+                """\
+echo 'set -a  # Automatically export all variables
+source .env
+set +a  # Stop automatic export
+export UV_COMPILE_BYTECODE=1
+export UV_PYTHON=python3.12
+export PATH=".venv/bin:$PATH"' > /home/testuser/.local/share/fujin/testapp/.appenv\
+""",
+                "sudo rm -rf .venv",
+                "uv python install 3.12",
+                "uv venv",
+                "uv pip install /home/testuser/.local/share/fujin/testapp/v0.0.9/testapp-0.0.9.whl",
+                "head -n 1 .versions",
+                "sed -i '1i 0.0.9' .versions",
+                "sudo systemctl restart testapp.service testapp-worker@1.service testapp-worker@2.service",
+                "rm -r v0.1.0",
+                "sed -i '1,/0.0.9/{/0.0.9/!d}' .versions",
+            ]
+        )
