@@ -1,7 +1,6 @@
 import hashlib
 from unittest.mock import MagicMock, patch
 
-import pytest
 from inline_snapshot import snapshot
 from fujin.commands.deploy import Deploy
 from fujin.config import InstallationMode

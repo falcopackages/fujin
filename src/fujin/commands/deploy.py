@@ -83,7 +83,7 @@ class Deploy(BaseCommand):
             )
 
     def install_services(self, conn: Connection) -> None:
-        new_units = self.config.get_systemd_units()
+        new_units = self.config.render_systemd_units()
         for filename, content in new_units.items():
             conn.run(
                 f"echo '{content}' | sudo tee /etc/systemd/system/{filename}",
@@ -93,11 +93,11 @@ class Deploy(BaseCommand):
 
         conn.run("sudo systemctl daemon-reload")
         conn.run(
-            f"sudo systemctl enable --now {' '.join(self.config.service_names)}",
+            f"sudo systemctl enable --now {' '.join(self.config.active_systemd_units)}",
             pty=True,
         )
 
-        valid_units = [*self.config.service_names, *(list(new_units.keys()))]
+        valid_units = [*self.config.active_systemd_units, *(list(new_units.keys()))]
 
         # Cleanup Stale Instances (e.g: replicas downgrade)
         ls_units = conn.run(
@@ -144,7 +144,7 @@ class Deploy(BaseCommand):
     def restart_services(self, conn: Connection) -> None:
         self.stdout.output("[blue]Restarting services...[/blue]")
         conn.run(
-            f"sudo systemctl restart {' '.join(self.config.service_names)}",
+            f"sudo systemctl restart {' '.join(self.config.active_systemd_units)}",
             pty=True,
         )
 

@@ -120,35 +120,35 @@ class Config(msgspec.Struct, kw_only=True):
         except msgspec.ValidationError as e:
             raise ImproperlyConfiguredError(f"Improperly configured, {e}") from e
 
-    def get_service_name(self, process_name: str) -> str:
+    def get_unit_template_name(self, process_name: str) -> str:
         config = self.processes[process_name]
         suffix = "@.service" if config.replicas > 1 else ".service"
         if process_name == "web":
             return f"{self.app_name}{suffix}"
         return f"{self.app_name}-{process_name}{suffix}"
 
-    def get_process_service_names(self, process_name: str) -> list[str]:
+    def get_active_unit_names(self, process_name: str) -> list[str]:
         config = self.processes[process_name]
-        service_name = self.get_service_name(process_name)
+        service_name = self.get_unit_template_name(process_name)
         if config.replicas > 1:
             base = service_name.replace("@.service", "")
             return [f"{base}@{i}.service" for i in range(1, config.replicas + 1)]
         return [service_name]
 
     @property
-    def service_names(self) -> list[str]:
+    def active_systemd_units(self) -> list[str]:
         services = []
         for name in self.processes:
-            services.extend(self.get_process_service_names(name))
+            services.extend(self.get_active_unit_names(name))
         for name, config in self.processes.items():
             if config.socket:
                 services.append(f"{self.app_name}.socket")
             if config.timer:
-                service_name = self.get_service_name(name)
+                service_name = self.get_unit_template_name(name)
                 services.append(f"{service_name.replace('.service', '')}.timer")
         return services
 
-    def get_systemd_units(self) -> dict[str, str]:
+    def render_systemd_units(self) -> dict[str, str]:
         package_templates = (
             Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )
@@ -163,7 +163,7 @@ class Config(msgspec.Struct, kw_only=True):
 
         files = {}
         for name, config in self.processes.items():
-            service_name = self.get_service_name(name)
+            service_name = self.get_unit_template_name(name)
             process_name = service_name.replace(".service", "")
             command = config.command
             process_config = config
@@ -206,7 +206,7 @@ class Config(msgspec.Struct, kw_only=True):
 
         return files
 
-    def get_caddyfile(self) -> str:
+    def render_caddyfile(self) -> str:
         package_templates = (
             Path(importlib.util.find_spec("fujin").origin).parent / "templates"
         )

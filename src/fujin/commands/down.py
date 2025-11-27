@@ -41,15 +41,16 @@ class Down(BaseCommand):
             if self.config.webserver.enabled:
                 caddy.teardown(conn, self.config)
 
-            service_names = self.config.service_names
+            active_systemd_units = self.config.active_systemd_units
             self.stdout.output(
-                f"[blue]Stopping and disabling services: {' '.join(service_names)}[/blue]"
+                f"[blue]Stopping and disabling services: {' '.join(active_systemd_units)}[/blue]"
             )
             conn.run(
-                f"sudo systemctl disable --now {' '.join(service_names)}", warn=True
+                f"sudo systemctl disable --now {' '.join(active_systemd_units)}",
+                warn=True,
             )
             # Remove service files
-            unit_files = list(self.config.get_systemd_units().keys())
+            unit_files = list(self.config.render_systemd_units().keys())
             paths = [f"/etc/systemd/system/{name}" for name in unit_files]
             conn.run(f"sudo rm {' '.join(paths)}", warn=True)
 

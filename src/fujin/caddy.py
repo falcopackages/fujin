@@ -70,7 +70,7 @@ def uninstall(conn: Connection):
 
 
 def setup(conn: Connection, config: Config):
-    rendered_content = config.get_caddyfile()
+    rendered_content = config.render_caddyfile()
 
     remote_path = config.caddy_config_path
     res = conn.run(

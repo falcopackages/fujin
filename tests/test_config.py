@@ -23,6 +23,19 @@ def test_config_validation_missing_web_process():
         )
 
 
+def test_config_no_processes():
+    with pytest.raises(ImproperlyConfiguredError):
+        Config(
+            app_name="testapp",
+            build_command="build",
+            distfile="dist.whl",
+            installation_mode=InstallationMode.BINARY,
+            host=HostConfig(domain_name="example.com", user="user"),
+            webserver=Webserver(upstream="localhost:8000", enabled=False),
+            processes={},
+        )
+
+
 def test_host_config_validation_env_and_envfile():
     with pytest.raises(ImproperlyConfiguredError):
         HostConfig(
@@ -47,54 +60,54 @@ def test_host_config_envfile_loading():
 
 
 def test_service_name_resolution(mock_config):
-    assert mock_config.get_service_name("web") == "testapp.service"
-    assert mock_config.get_service_name("worker") == "testapp-worker@.service"
+    assert mock_config.get_unit_template_name("web") == "testapp.service"
+    assert mock_config.get_unit_template_name("worker") == "testapp-worker@.service"
 
     mock_config.processes["beat"] = ProcessConfig(command="beat")
-    assert mock_config.get_service_name("beat") == "testapp-beat.service"
+    assert mock_config.get_unit_template_name("beat") == "testapp-beat.service"
 
 
-def test_get_process_service_names(mock_config):
-    assert mock_config.get_process_service_names("web") == ["testapp.service"]
-    assert mock_config.get_process_service_names("worker") == [
+def test_get_active_unit_names(mock_config):
+    assert mock_config.get_active_unit_names("web") == ["testapp.service"]
+    assert mock_config.get_active_unit_names("worker") == [
         "testapp-worker@1.service",
         "testapp-worker@2.service",
     ]
 
 
-def test_service_names_property(mock_config):
+def test_active_systemd_units_property(mock_config):
     mock_config.processes["cleanup"] = ProcessConfig(
         command="cleanup", timer="OnCalendar=daily"
     )
     mock_config.processes["api"] = ProcessConfig(command="api", socket=True)
 
-    service_names = mock_config.service_names
+    active_systemd_units = mock_config.active_systemd_units
 
-    assert "testapp.service" in service_names
-    assert "testapp-worker@1.service" in service_names
-    assert "testapp-worker@2.service" in service_names
-    assert "testapp-cleanup.timer" in service_names
-    assert "testapp.socket" in service_names
+    assert "testapp.service" in active_systemd_units
+    assert "testapp-worker@1.service" in active_systemd_units
+    assert "testapp-worker@2.service" in active_systemd_units
+    assert "testapp-cleanup.timer" in active_systemd_units
+    assert "testapp.socket" in active_systemd_units
 
 
-def test_get_systemd_units_filenames(mock_config):
-    units = mock_config.get_systemd_units()
+def test_render_systemd_units_filenames(mock_config):
+    units = mock_config.render_systemd_units()
     assert "testapp.service" in units
     assert "testapp-worker@.service" in units
 
 
-def test_get_systemd_units_with_timer_filenames(mock_config):
+def test_render_systemd_units_with_timer_filenames(mock_config):
     mock_config.processes["cleanup"] = ProcessConfig(
         command="cleanup", timer="OnCalendar=daily"
     )
-    units = mock_config.get_systemd_units()
+    units = mock_config.render_systemd_units()
     assert "testapp-cleanup.timer" in units
     assert "testapp-cleanup.service" in units
 
 
-def test_get_systemd_units_with_socket_filenames(mock_config):
+def test_render_systemd_units_with_socket_filenames(mock_config):
     mock_config.processes["api"] = ProcessConfig(command="api", socket=True)
-    units = mock_config.get_systemd_units()
+    units = mock_config.render_systemd_units()
     assert "testapp.socket" in units
     assert "testapp-api.service" in units
 
@@ -114,9 +127,9 @@ def test_get_distfile_path(mock_config):
     assert mock_config.get_distfile_path("2.0.0") == Path("dist/app-2.0.0.whl")
 
 
-def test_get_caddyfile_with_statics(mock_config):
+def test_render_caddyfile_with_statics(mock_config):
     mock_config.webserver.statics = {"/static/*": "/var/www/static/"}
-    caddyfile = mock_config.get_caddyfile()
+    caddyfile = mock_config.render_caddyfile()
 
     assert "handle_path /static/* {" in caddyfile
     assert "root * /var/www/static/" in caddyfile

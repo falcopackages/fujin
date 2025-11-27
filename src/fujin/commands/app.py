@@ -40,7 +40,7 @@ class App(BaseCommand):
             if self.config.webserver.enabled:
                 infos["running_at"] = f"https://{self.config.host.domain_name}"
 
-            names = self.config.service_names
+            names = self.config.active_systemd_units
             if names:
                 result = conn.run(
                     f"sudo systemctl is-active {' '.join(names)}",
@@ -54,15 +54,17 @@ class App(BaseCommand):
 
             services = {}
             for process_name in self.config.processes:
-                service_names = self.config.get_process_service_names(process_name)
+                active_systemd_units = self.config.get_active_unit_names(process_name)
                 running_count = sum(
-                    1 for name in service_names if services_status.get(name) == "active"
+                    1
+                    for name in active_systemd_units
+                    if services_status.get(name) == "active"
                 )
-                total_count = len(service_names)
+                total_count = len(active_systemd_units)
 
                 if total_count == 1:
                     services[process_name] = services_status.get(
-                        service_names[0], "unknown"
+                        active_systemd_units[0], "unknown"
                     )
                 else:
                     services[process_name] = f"{running_count}/{total_count}"
@@ -148,7 +150,7 @@ class App(BaseCommand):
 
     def _run_service_command(self, command: str, name: str | None):
         with self.connection() as conn:
-            names = self._resolve_service_names(name)
+            names = self._resolve_active_systemd_units(name)
             if not names:
                 self.stdout.output("[yellow]No services found[/yellow]")
                 return
@@ -174,7 +176,7 @@ class App(BaseCommand):
         lines: Annotated[int, cappa.Arg(short="-n", long="--lines")] = 50,
     ):
         with self.connection() as conn:
-            names = self._resolve_service_names(name)
+            names = self._resolve_active_systemd_units(name)
             if names:
                 units = " ".join(f"-u {n}" for n in names)
                 conn.run(
@@ -185,12 +187,12 @@ class App(BaseCommand):
             else:
                 self.stdout.output("[yellow]No services found[/yellow]")
 
-    def _resolve_service_names(self, name: str | None) -> list[str]:
+    def _resolve_active_systemd_units(self, name: str | None) -> list[str]:
         if not name:
-            return self.config.service_names
+            return self.config.active_systemd_units
 
         if name in self.config.processes:
-            return self.config.get_process_service_names(name)
+            return self.config.get_active_unit_names(name)
 
         if name == "socket":
             has_socket = any(config.socket for config in self.config.processes.values())
@@ -198,6 +200,6 @@ class App(BaseCommand):
                 return [f"{self.config.app_name}.socket"]
 
         if name == "timer":
-            return [n for n in self.config.service_names if n.endswith(".timer")]
+            return [n for n in self.config.active_systemd_units if n.endswith(".timer")]
 
         return [name]
