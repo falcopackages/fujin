@@ -20,7 +20,7 @@ fujin documentation
    :hidden:
 
    installation
-   tutorial
+   howtos/index
    configuration
    commands/index
    secrets

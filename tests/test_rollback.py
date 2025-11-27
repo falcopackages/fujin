@@ -3,7 +3,7 @@ from fujin.commands.rollback import Rollback
 from inline_snapshot import snapshot
 
 
-def test_rollback_flow(mock_connection, get_commands):
+def test_rollback(mock_connection, get_commands):
     def run_side_effect(command, **kwargs):
         mock = MagicMock()
         if "sed -n '2,$p' .versions" in command:

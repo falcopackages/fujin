@@ -93,8 +93,27 @@ Example:
 processes
 ---------
 
-A mapping of process names to commands that will be managed by the process manager. Define as many processes as needed, but
-when using any proxy other than *fujin.proxies.dummy*, a *web* process must be declared.
+A mapping of process names to their configuration. This section serves as the **metadata** that drives the generation of Systemd unit files.
+Fujin uses a template-based approach where the data defined here is passed to Jinja2 templates to render the final service files.
+
+Each entry in the `processes` dictionary represents a service that will be managed by Systemd. The key is the process name (e.g., `web`, `worker`), and the value is a dictionary of configuration options.
+
+**Configuration Options:**
+
+- **command** (required): The command to execute. Relative paths are resolved against the application directory on the host.
+- **replicas** (optional, default: 1): The number of instances to run. If > 1, a template unit (e.g., `app-worker@.service`) is generated.
+- **socket** (optional, default: false): If true, enables socket activation. Fujin will look for a corresponding socket template.
+- **timer** (optional): A systemd calendar event expression (e.g., `OnCalendar=daily`). If set, a timer unit is generated instead of a standard service.
+
+**Template Selection Logic:**
+
+For each process defined, Fujin looks for a matching template in your local configuration directory (default: `.fujin/`) or falls back to the built-in defaults.
+The lookup order for a process named `worker` is:
+
+1.  `worker.service.j2` (Specific template)
+2.  `default.service.j2` (Generic fallback)
+
+This allows you to have a generic configuration for most processes while customizing specific ones (like `web`) by simply creating a `web.service.j2` file.
 
 Example:
 
@@ -102,18 +121,20 @@ Example:
     :caption: fujin.toml
 
     [processes]
-    web = ".venv/bin/gunicorn myproject.wsgi:application"
+    # Uses web.service.j2 if it exists, otherwise default.service.j2
+    web = { command = ".venv/bin/gunicorn myproject.wsgi:application" }
+
+    # Uses default.service.j2, generating a template unit for multiple instances
+    worker = { command = ".venv/bin/celery -A myproject worker", replicas = 2 }
+
+    # Uses beat.service.j2 if exists, or default.service.j2. Also generates a timer unit.
+    beat = { command = ".venv/bin/celery -A myproject beat", timer = "OnCalendar=daily" }
 
 
 .. note::
 
-    Commands are relative to your *app_dir*. When generating systemd service files, the full path is automatically constructed.
-    Refer to the *apps_dir* setting on the host to understand how *app_dir* is determined.
-    Here are the templates for the service files:
-
-    - `web.service <https://github.com/falcopackages/fujin/blob/main/src/fujin/templates/web.service>`_
-    - `web.socket <https://github.com/falcopackages/fujin/blob/main/src/fujin/templates/web.socket>`_
-    - `simple.service <https://github.com/falcopackages/fujin/blob/main/src/fujin/templates/simple.service>`_ (for all additional processes)
+    When generating systemd service files, the full path to the command is automatically constructed based on the *apps_dir* setting.
+    You can inspect the default templates in the source code or by running `fujin init --templates` to copy them to your project.
 
 Host Configuration
 -------------------
