@@ -219,6 +219,10 @@ class Config(msgspec.Struct, kw_only=True):
             statics=self.webserver.statics,
         )
 
+    @property
+    def caddy_config_path(self) -> str:
+        return f"{self.webserver.config_dir}/{self.app_name}.caddy"
+
 
 class HostConfig(msgspec.Struct, kw_only=True):
     ip: str | None = None
@@ -265,6 +269,7 @@ class Webserver(msgspec.Struct):
     upstream: str
     enabled: bool = True
     statics: dict[str, str] = msgspec.field(default_factory=dict)
+    config_dir: str = "/etc/caddy/conf.d"
 
 
 def read_version_from_pyproject():

@@ -130,3 +130,10 @@ def test_process_config_validation_replicas_and_socket_or_timer():
 
     with pytest.raises(ImproperlyConfiguredError):
         ProcessConfig(command="cmd", replicas=2, timer="OnCalendar=daily")
+
+
+def test_caddy_config_path(mock_config):
+    assert mock_config.caddy_config_path == "/etc/caddy/conf.d/testapp.caddy"
+
+    mock_config.webserver.config_dir = "/custom/path"
+    assert mock_config.caddy_config_path == "/custom/path/testapp.caddy"

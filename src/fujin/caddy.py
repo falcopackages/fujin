@@ -72,7 +72,7 @@ def uninstall(conn: Connection):
 def setup(conn: Connection, config: Config):
     rendered_content = config.get_caddyfile()
 
-    remote_path = f"/etc/caddy/conf.d/{config.app_name}.caddy"
+    remote_path = config.caddy_config_path
     res = conn.run(
         f"echo '{rendered_content}' | sudo tee {remote_path}",
         hide="out",
@@ -84,7 +84,7 @@ def setup(conn: Connection, config: Config):
 
 
 def teardown(conn: Connection, config: Config):
-    remote_path = f"/etc/caddy/conf.d/{config.app_name}.caddy"
+    remote_path = config.caddy_config_path
     conn.run(f"sudo rm {remote_path}", warn=True, pty=True)
     conn.run("sudo systemctl reload caddy", pty=True)
 
