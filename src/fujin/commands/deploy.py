@@ -65,17 +65,18 @@ class Deploy(BaseCommand):
                         f"sed -n '{self.config.versions_to_keep + 1},$p' .versions",
                         hide=True,
                     ).stdout.strip()
-                    result_list = result.split("\n")
-                    if result != "":
-                        self.stdout.output(
-                            "[blue]Pruning old release versions...[/blue]"
-                        )
+                    if result:
+                        result_list = result.split("\n")
                         to_prune = [f"{self.config.app_dir}/v{v}" for v in result_list]
-                        conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
-                        conn.run(
-                            f"sed -i '{self.config.versions_to_keep + 1},$d' .versions",
-                            warn=True,
-                        )
+                        if to_prune:
+                            self.stdout.output(
+                                "[blue]Pruning old release versions...[/blue]"
+                            )
+                            conn.run(f"rm -r {' '.join(to_prune)}", warn=True)
+                            conn.run(
+                                f"sed -i '{self.config.versions_to_keep + 1},$d' .versions",
+                                warn=True,
+                            )
         if caddy_configured:
             self.stdout.output("[green]Deployment completed successfully![/green]")
             self.stdout.output(

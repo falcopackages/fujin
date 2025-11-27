@@ -62,15 +62,7 @@ Environment variable containing the password for the service account. This is on
 Webserver
 ---------
 
-Web server configurations.
-
-type
-~~~~
-The reverse proxy implementation to use. Available options:
-
-- *fujin.proxies.caddy* (default)
-- *fujin.proxies.nginx*
-- *fujin.proxies.dummy* (disables proxy)
+Caddy web server configurations.
 
 upstream
 ~~~~~~~~
@@ -78,17 +70,15 @@ The address where your web application listens for requests. Supports any value 
 
 - HTTP address (e.g., *localhost:8000* )
 - Unix socket caddy (e.g., *unix//run/project.sock* )
-- Unix socket nginx (e.g., *http://unix:/run/project.sock* )
 
-certbot_email
-~~~~~~~~~~~~~
-Required when Nginx is used as a proxy to obtain SSL certificates.
+config_dir
+~~~~~~~~~~
+The directory where the Caddyfile for the project will be stored on the host. Default: **/etc/caddy/conf.d/**
 
 statics
 ~~~~~~~
 
-Defines the mapping of URL paths to local directories for serving static files. The syntax and support for static
-file serving depend on the selected reverse proxy. The directories you map should be accessible by the web server, meaning
+Defines the mapping of URL paths to local directories for serving static files. The directories you map should be accessible by caddy, meaning
 with read permissions for the *www-data* group; a reliable choice is **/var/www**.
 
 Example:
@@ -98,7 +88,6 @@ Example:
 
     [webserver]
     upstream = "unix//run/project.sock"
-    type = "fujin.proxies.caddy"
     statics = { "/static/*" = "/var/www/myproject/static/" }
 
 processes

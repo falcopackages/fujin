@@ -88,8 +88,6 @@ echo 'example.com {
 """,
             "sudo systemctl reload caddy",
             "sed -n '6,$p' .versions",
-            "rm -r ",
-            "sed -i '6,$d' .versions",
         ]
     )
 
